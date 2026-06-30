@@ -77,7 +77,9 @@ export default function Home() {
   useEffect(() => {
     async function carregarRanking() {
       try {
-        const res = await fetch("${process.env.NEXT_PUBLIC_API_URL}/ranking")
+        // acorda o Railway antes de buscar os dados reais
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/health`).catch(() => {})
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ranking`)
         const data = await res.json()
         setRanking(data)
       } catch (err) {
