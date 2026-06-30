@@ -3,10 +3,9 @@
 import AIInterpretation from "./component/AIInterpretation"
 import RankingCard from "./component/RankingCard"
 import Link from "next/link"
-import { calcularScore, gerarCenario, gerarSinal } from "./core/score"
+import { calcularScoreDiagnostico, gerarCenario, gerarRecomendacao } from "./core/score"
 import { usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
-import { gerarRanking } from "./core/ranking"
 import {
   LineChart,
   Line,
@@ -24,30 +23,24 @@ export default function Home() {
   const [watchlist, setWatchlist] = useState<string[]>([])
   const [aba, setAba] = useState("mercado")
 
-  // 🔥 RANKING
-  const [ativos, setAtivos] = useState<any[]>([])
-  const ranking = gerarRanking(ativos)
+  const [ranking, setRanking] = useState<any[]>([])
 
-  // ✅ DADOS CORRETOS (fix do score)
   const variacao = resultado?.variacao_percentual ?? 0
-  const volatilidade = Math.abs(variacao)
-
-  const tendencia =
-    variacao > 0.5 ? "alta" :
-    variacao < -0.5 ? "queda" :
-    "lateral"
-
   const setor = resultado?.setor ?? ""
 
-  // ✅ SCORE CORRETO
-  const score = calcularScore({
-    variacao,
-    volatilidade,
-    tendencia,
-    setor
-  })
+  const diagnostico = resultado
+    ? calcularScoreDiagnostico({
+        precos: resultado.grafico?.precos ?? [],
+        highs: resultado.grafico?.highs ?? [],
+        lows: resultado.grafico?.lows ?? [],
+        datas: resultado.grafico?.datas ?? [],
+        mercado: resultado.mercado ?? "neutro",
+        setor
+      })
+    : { score: 0, decisao: "aguardar" }
 
-  const sinal = gerarSinal(score)
+  const score = diagnostico.score
+  const sinal = gerarRecomendacao(score)
   const cenario = gerarCenario(variacao)
 
   const dadosGrafico = resultado?.grafico?.datas?.map((data: string, i: number) => ({
@@ -59,7 +52,7 @@ export default function Home() {
     if (!ticker) return
 
     try {
-      const res = await fetch(`http://localhost:8000/buscar/${ticker}`)
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/buscar/${ticker}`)
 
       if (!res.ok) {
         throw new Error(`Erro na API: ${res.status}`)
@@ -84,21 +77,9 @@ export default function Home() {
   useEffect(() => {
     async function carregarRanking() {
       try {
-        const tickers = ["PETR4", "VALE3", "ITUB4", "BBDC4"]
-
-        const dados = await Promise.all(
-          tickers.map(async (ticker) => {
-            const res = await fetch(`http://localhost:8000/buscar/${ticker}`)
-            const data = await res.json()
-
-            return {
-              ticker,
-              ...data
-            }
-          })
-        )
-
-        setAtivos(dados)
+        const res = await fetch("${process.env.NEXT_PUBLIC_API_URL}/ranking")
+        const data = await res.json()
+        setRanking(data)
       } catch (err) {
         console.error("Erro ao carregar ranking:", err)
       }
@@ -178,8 +159,19 @@ export default function Home() {
       {resultado && (
         <div className="max-w-3xl mx-auto mt-12 space-y-6">
 
+          {/* BLOQUEIO TOTAL — histórico insuficiente */}
+          {resultado.nao_elegivel && (
+            <div className="bg-red-50 border border-red-200 p-5 rounded-2xl">
+              <p className="font-semibold text-red-800">{resultado.nome || resultado.ticker}</p>
+              <p className="text-red-700 mt-1 text-sm">
+                Não foi possível analisar este ativo: {resultado.motivo}
+              </p>
+            </div>
+          )}
+
           {/* CARD PRINCIPAL */}
-          <div className="bg-white p-6 rounded-2xl shadow-md relative">
+          {!resultado.nao_elegivel && <div className="bg-white p-6 rounded-2xl shadow-md relative">
+
 
             <div className="absolute top-4 right-4 flex gap-2">
 
@@ -204,10 +196,25 @@ export default function Home() {
 
             <p className="text-4xl mt-3">{resultado.preco}</p>
 
-            {/* 🔥 SINAL (NOVO, sem quebrar layout) */}
-            <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">
-              {sinal}
-            </span>
+            {/* SINAL + REGIME */}
+            <div className="flex gap-2 flex-wrap justify-center mt-1">
+              <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">
+                {sinal}
+              </span>
+              {resultado.mercado && (
+                <span className={`text-xs px-2 py-1 rounded font-medium ${
+                  resultado.mercado === "bull" ? "bg-green-100 text-green-700" :
+                  resultado.mercado === "bear" ? "bg-red-100 text-red-700" :
+                  "bg-gray-100 text-gray-500"
+                }`}>
+                  Mercado: {
+                    resultado.mercado === "bull" ? "Alta" :
+                    resultado.mercado === "bear" ? "Baixa" :
+                    "Neutro"
+                  }
+                </span>
+              )}
+            </div>
 
             {/* SCORE */}
             <p className={`text-sm font-bold mt-2 ${
@@ -215,8 +222,16 @@ export default function Home() {
               score >= 40 ? "text-yellow-600" :
               "text-red-600"
             }`}>
-              Score: {score}
+              Score: {Math.round(score)}
             </p>
+
+            {/* BADGE CONFIABILIDADE REDUZIDA */}
+            {resultado.confiabilidade === "reduzida" && (
+              <div className="mt-2 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-xl text-xs text-yellow-800">
+                <span className="font-semibold">Confiabilidade reduzida: </span>
+                {resultado.avisos_confiabilidade?.join(" · ")}
+              </div>
+            )}
 
             {/* gráfico */}
             {mostrarGrafico && dadosGrafico.length > 0 && (
@@ -240,7 +255,7 @@ export default function Home() {
               {variacao}%
             </p>
 
-          </div>
+          </div>}
 
           {/* CENÁRIO */}
           <div className="bg-white p-5 rounded-2xl shadow-sm">

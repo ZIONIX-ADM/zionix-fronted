@@ -1,25 +1,26 @@
-import { calcularScore, gerarSinal } from "../core/score"
+import { gerarSinal } from "../core/score"
 import { calcularScoreEstrutural } from "../core/estrutural"
+import { setores, forcaSetor } from "./setores"
 import {
-  setores,
-  forcaSetor
-} from "./setores"
+  type Candle,
+  media,
+  calcularRSI,
+  calcularATR,
+  classificarContexto,
+  trendEngine,
+  pullbackEngine
+} from "../core/indicators"
+import { type Decisao, gerarDiagnosticoDiario } from "../core/diagnostico"
 
-type Candle = {
-  data: string
-  preco: number
-}
-
-
-// 🔎 FETCH DADOS
 async function buscarDados(
   ticker: string,
   inicio: string,
   fim: string
-){
+) {
   const res = await fetch(
-    `http://localhost:8000/historico/${ticker}?inicio=${inicio}&fim=${fim}`
+    `${process.env.NEXT_PUBLIC_API_URL}/historico/${ticker}?inicio=${inicio}&fim=${fim}`
   )
+
   const data = await res.json()
 
   if (data.erro) {
@@ -34,9 +35,7 @@ async function regimeMercado(
   inicio: string,
   fim: string
 ): Promise<"bull" | "bear" | "neutro"> {
-
-  const dados =
-  await buscarDados(
+  const dados = await buscarDados(
     "BOVA11",
     inicio,
     fim
@@ -45,574 +44,491 @@ async function regimeMercado(
   if (!dados || dados.length < 220) {
     return "neutro"
   }
-  
-    const precos = dados.map((d: Candle) => d.preco)
-  
-    const atual = precos[precos.length - 1]
-  
-    const mm50 = media(precos, 50, precos.length - 1)
-    const mm200 = media(precos, 200, precos.length - 1)
-  
-    if (!mm50 || !mm200) {
-      return "neutro"
-    }
-  
-    // 🚀 bull market
-    if (
-      atual > mm50 &&
-      mm50 > mm200
-    ) {
-      return "bull"
-    }
-  
-    // 🩸 bear market
-    if (
-      atual < mm50 &&
-      mm50 < mm200
-    ) {
-      return "bear"
-    }
-  
+
+  const precos = dados.map((d: Candle) => d.preco)
+
+  const atual = precos[precos.length - 1]
+  const mm50 = media(precos, 50, precos.length - 1)
+  const mm200 = media(precos, 200, precos.length - 1)
+
+  if (!mm50 || !mm200) {
     return "neutro"
   }
 
-// 📊 MÉDIA MÓVEL
-function media(precos: number[], periodo: number, index: number) {
-  if (index < periodo) return null
-
-  let soma = 0
-
-  for (let i = index - periodo; i < index; i++) {
-    soma += precos[i]
-  }
-
-  return soma / periodo
-}
-
-// 📊 IDENTIFICAR REGIME
-function identificarRegime(
-  precos: number[],
-  i: number
-) {
-
-  const mm9 = media(precos, 9, i)
-  const mm21 = media(precos, 21, i)
-  const mm50 = media(precos, 50, i)
-
-  if (!mm9 || !mm21 || !mm50) {
-    return "neutro"
-  }
-
-  // 📈 força da tendência
-  const distanciaMM =
-    Math.abs(mm9 - mm21) / mm21
-
-  // 🚀 aceleração
-  const aceleracao =
-    ((mm9 - mm21) / mm50) * 100
-
-  // 🔥 TREND
   if (
-    mm9 > mm21 &&
-    mm21 > mm50 &&
-    distanciaMM > 0.015
+    atual > mm50 &&
+    mm50 > mm200
   ) {
-    return "trend"
+    return "bull"
   }
 
-  // 🚀 EXPLOSÃO
   if (
-    mm9 > mm21 &&
-    aceleracao > 4
+    atual < mm50 &&
+    mm50 < mm200
   ) {
-    return "explosao"
-  }
-
-  // 📊 LATERAL
-  if (distanciaMM < 0.008) {
-    return "lateral"
+    return "bear"
   }
 
   return "neutro"
 }
 
-// 📈 RSI
-function calcularRSI(precos: number[], periodo: number, index: number) {
-  if (index < periodo) return null
-
-  let ganhos = 0
-  let perdas = 0
-
-  for (let i = index - periodo; i < index; i++) {
-    const diff = precos[i] - precos[i - 1]
-
-    if (diff > 0) ganhos += diff
-    else perdas += Math.abs(diff)
-  }
-
-  const rs = ganhos / (perdas || 1)
-  return 100 - (100 / (1 + rs))
-}
-
-function trendEngine(
-  precos: number[],
-  dados: Candle[],
-  i: number
+function parametrosRisco(
+  contexto: string,
+  volatilidade: number,
+  atr: number,
+  trendQuality: number
 ) {
-
-  const mm9 = media(precos, 9, i)
-  const mm21 = media(precos, 21, i)
-  const mm50 = media(precos, 50, i)
-
-  if (!mm9 || !mm21 || !mm50) {
-    return null
-  }
-
-
-  // 🔥 tendência estrutural
-  const distancia = ((mm21 - mm50) / mm50) * 100
-
-  const tendenciaForte =
-    mm21 > mm50 &&
-    distancia > 2
-
-  // 🔥 direção positiva
-  const inclinacao =
-    mm21 > media(precos, 21, i - 5)!
-
-  // 🔥 preço acima da mm50
-  const acimaEstrutura =
-    precos[i] > mm50
+  let stop = atr * 2
+  let trailing = atr * 1.5
 
   if (
-    tendenciaForte &&
-    inclinacao &&
-    acimaEstrutura
+    contexto === "tendencia_forte" &&
+    trendQuality >= 70
+  )
+  {
+    trailing = atr * 5
+    stop = atr * 3
+  }
+
+  if (
+    contexto === "pullback" &&
+    trendQuality >= 55
   ) {
-
-    console.log("🔥 TREND ENGINE:", dados[i].data)
-
-    return {
-      stop: -10,
-      trailing: 12
-    }
+    trailing = atr * 3.5
+stop = atr * 2.5
   }
 
-  return null
-}
-function scoreEstrutural(
-  precos: number[]
-) { const ultimo = precos.length - 1
-
-  const mm50 = media(precos, 50, ultimo)
-  const mm200 = media(precos, 200, ultimo)
-
-  if (!mm50 || !mm200) {
-    return 0
+  if (contexto === "lateral") {
+    trailing = atr * 1.2
+    stop = atr * 1.4
   }
 
-  let score = 0
-
-  // 📈 MM200 inclinada pra cima
-  const mm200Antiga =
-    media(precos, 200, ultimo - 20)
-
-  if (mm200Antiga) {
-
-    const inclinacao =
-      ((mm200 - mm200Antiga) / mm200Antiga) * 100
-
-    if (inclinacao > 1)
-      score += 30
-
-    if (inclinacao > 3)
-      score += 20
+  if (contexto === "bearish") {
+    trailing = atr * 1
+    stop = atr * 1.2
   }
 
-  // 🚀 preço acima da MM200
-  const distancia =
-    ((precos[ultimo] - mm200) / mm200) * 100
-
-  if (distancia > 5)
-    score += 20
-
-  if (distancia > 12)
-    score += 10
-
-  // 🔥 tendência consistente
-  let tendenciaDias = 0
-
-  for (let i = 200; i < precos.length; i++) {
-
-    const mm9 = media(precos, 9, i)
-    const mm21 = media(precos, 21, i)
-    const mm50Local = media(precos, 50, i)
-
-    if (
-      mm9 &&
-      mm21 &&
-      mm50Local &&
-      mm9 > mm21 &&
-      mm21 > mm50Local
-    ) {
-      tendenciaDias++
-    }
+  if (volatilidade > 7) {
+    trailing *= 1.3
+    stop *= 1.2
   }
 
-  const percentualTrend =
-    (tendenciaDias / (precos.length - 200)) * 100
-
-  if (percentualTrend > 25)
-    score += 10
-
-  if (percentualTrend > 40)
-    score += 10
-
-  return score
+  return {
+    stop: -stop,
+    trailing
+  }
 }
 
-// 🚀 BACKTEST
+function pipelineEntrada(diagnostico: {
+  score: number
+  decisao: Decisao
+}) {
+  return {
+    aprovado:
+      diagnostico.decisao === "comprar" ||
+      diagnostico.decisao === "manter",
+
+    score: diagnostico.score
+  }
+}
+
 export async function rodarBacktest(
   ticker: string,
   inicio: string,
   fim: string
-){
-  const ativosBanidos = [
-    "MRVE3",
-    "MGLU3",
-    "BBAS3",
-    "SUZB3"
-  ]
-  
-  if (ativosBanidos.includes(ticker)) {
-    console.log(`🚫 Ativo banido: ${ticker}`)
-  
+) {
+  const dados: Candle[] =
+    await buscarDados(ticker, inicio, fim)
+
+  const mercado =
+    await regimeMercado(inicio, fim)
+
+  console.log(`🌎 Regime mercado: ${mercado}`)
+
+  if (!dados || dados.length === 0) {
     return {
       resultados: [],
       buyHold: 0
     }
   }
-  const dados: Candle[] =
-  await buscarDados(
-    ticker,
-    inicio,
-    fim
-  )
-
-const mercado =
-await regimeMercado(
-  inicio,
-  fim
-)
-
-console.log(
-  `🌎 Regime mercado: ${mercado}`
-)
-  if (!dados || dados.length === 0) {
-    return { resultados: [], buyHold: 0 }
-  }
 
   const precos = dados.map(d => d.preco)
 
   let estrutural =
-  calcularScoreEstrutural(dados)
+    calcularScoreEstrutural(dados)
 
   const setor =
-  setores[ticker] || "neutro"
+    setores[ticker] || "neutro"
 
-const forca =
-  forcaSetor[setor] || 50
+  const forca =
+    forcaSetor[setor] || 50
 
-console.log(
-  `🏢 Setor: ${setor} | Força: ${forca}`
-)
-
-if (
-  mercado === "bear" &&
-  estrutural < 60
-) {
-
-  console.log(
-    `🩸 Mercado ruim bloqueando ${ticker}`
-  )
-
-  return {
-    resultados: [],
-    buyHold: 0
+  if (
+    mercado === "bear" &&
+    forca < 80
+  ) {
+    estrutural *= 0.9
   }
-}
 
-if (mercado === "bear") {
-  estrutural *= 0.75
-}
+  if (
+    mercado === "bear" &&
+    forca >= 80 &&
+    estrutural < 40
+  ) {
+    estrutural = 40
+  }
+
+  if (estrutural < 0) {
+    estrutural = 0
+  }
+
+  const qualityScore =
+(
+  estrutural * 0.7 +
+  forca * 0.3
+)
 
   console.log(
     `🏗️ ${ticker} Score estrutural: ${estrutural}`
   )
 
-  if (
-    estrutural < 30 ||
-    forca < 40
-  ){
-
-  console.log(
-    `🚫 Ativo banido: ${ticker}`
-  )
-
-  return {
-    resultados: [],
-    buyHold: 0
-  }
-}
-
-  // 📊 BUY & HOLD
   const precoInicial = dados[0].preco
   const precoFinal = dados[dados.length - 1].preco
 
   const buyHold =
     ((precoFinal - precoInicial) / precoInicial) * 100
 
-  let resultados: any[] = []
+  const resultados: any[] = []
 
   let capital = 100
-let picoCapital = 100
+  let picoCapital = 100
 
-  for (let i = 21; i < dados.length - 1; i++) {
+  let cooldown = 0
+  let bloqueiosScore = 0
+  let bloqueiosDefensivo = 0
+
+  for (let i = 50; i < dados.length - 1; i++) {
+    if (cooldown > 0) {
+      cooldown--
+      continue
+    }
 
     const hoje = dados[i]
     const ontem = dados[i - 1]
 
-    // 📊 MÉDIAS
     const mm9 = media(precos, 9, i)
     const mm21 = media(precos, 21, i)
     const mm50 = media(precos, 50, i)
+    const mm50Anterior = media(precos, 50, i - 5)
 
-    if (!mm9 || !mm21 || !mm50) continue
+    if (!mm9 || !mm21 || !mm50 || !mm50Anterior) {
+      continue
+    }
 
-    // 📈 VARIAÇÃO
     const variacao =
       ((hoje.preco - ontem.preco) / ontem.preco) * 100
 
-    const volatilidade = Math.abs(variacao)
+    const volatilidade =
+      Math.abs(variacao)
 
-    // 🔥 TREND QUALITY
-    const mm50Anterior = media(precos, 50, i - 5)
+    let compressaoScore = 0
 
-    if (!mm50Anterior) continue
+    if (volatilidade < 1.2) compressaoScore += 15
+    if (volatilidade < 0.8) compressaoScore += 15
 
     let trendQuality = 0
     let momentumScore = 0
 
-    // 📈 inclinação MM50
     const slope =
       ((mm50 - mm50Anterior) / mm50Anterior) * 100
 
-    if (slope > 0.3) trendQuality += 25
-    if (slope > 0.6) trendQuality += 25
+    if (slope > 0.2) trendQuality += 20
+    if (slope > 0.5) trendQuality += 20
 
-    // 📊 distância da MM50
     const distanciaMM =
       ((hoje.preco - mm50) / mm50) * 100
 
-    if (distanciaMM > 1) {
-      trendQuality += 20
-    }
+    if (distanciaMM > 1) trendQuality += 15
+    if (mm9 > mm21) trendQuality += 15
+    if (mm21 > mm50) trendQuality += 15
 
-    // 🚀 força recente
-    if (i < 5) continue
+    const preco5DiasAtras =
+      dados[i - 5]?.preco
 
-    const preco5DiasAtras = dados[i - 5].preco
+    if (!preco5DiasAtras) continue
 
     const variacao5dias =
       ((hoje.preco - preco5DiasAtras) /
-        preco5DiasAtras) *
-      100
+        preco5DiasAtras) * 100
 
-      // 🚀 MOMENTUM
+        if (variacao5dias > 2) momentumScore += 10
+        if (variacao5dias > 4) momentumScore += 15
+        if (variacao5dias > 6) momentumScore += 20
 
-if (variacao5dias > 5) {
-  momentumScore += 25
-}
+    const aceleracaoMM =
+      ((mm9 - mm21) / mm21) * 100
 
-if (variacao5dias > 8) {
-  momentumScore += 25
-}
+    if (aceleracaoMM > 1.5) momentumScore += 20
+    if (variacao > 1.2) momentumScore += 15
+    momentumScore = Math.min(momentumScore, 40)
 
-// 📈 expansão da MM9
-const aceleracaoMM =
-  ((mm9 - mm21) / mm21) * 100
+    const contexto =
+      classificarContexto(precos, i)
 
-if (aceleracaoMM > 2) {
-  momentumScore += 25
-}
+    let setup: any = null
 
-// 🔥 candle forte
-if (variacao > 1.2) {
-  momentumScore += 25
-}
+    const trend =
+      trendEngine(precos, dados, i)
 
-    if (variacao5dias > 3) {
-      trendQuality += 20
+    if (trend) setup = trend
+
+    if (!setup) {
+      const pullback =
+        pullbackEngine(precos, dados, i)
+
+      if (pullback) setup = pullback
     }
 
-    // 🌪️ volatilidade controlada
-    if (volatilidade < 2.5) {
-      trendQuality += 10
+    const tipoSetup =
+      setup?.tipo || "sem_setup"
+
+    console.log(
+      "🧭 CONTEXTO:",
+      contexto,
+      "| SETUP:",
+      tipoSetup
+    )
+
+    const rsi =
+      calcularRSI(precos, 14, i)
+
+    if (!rsi) continue
+
+    const entradaConfirmada =
+    hoje.preco > ontem.preco &&
+    mm9 > mm21 &&
+    hoje.preco > mm50
+
+    const diagnostico =
+      gerarDiagnosticoDiario({
+        contexto,
+        setup: { tipo: tipoSetup },
+        trendQuality,
+        momentumScore,
+        compressaoScore,
+        estrutural,
+        volatilidade,
+        rsi,
+        mercado,
+        entradaConfirmada,
+        forca
+      })
+
+    const pipeline =
+      pipelineEntrada(diagnostico)
+
+    const scoreSwing =
+      pipeline.score ?? 0
+
+    if (tipoSetup === "sem_setup") {
+      bloqueiosScore++
+      continue
     }
-    let qualidadeFinal =
-    trendQuality + momentumScore
+
+    if (!pipeline.aprovado) {
+      bloqueiosScore++
+      continue
+    }
+
+    const sinal =
+      gerarSinal(scoreSwing)
+
+    let tamanhoPosicao: number
+    if (scoreSwing >= 80)
+      tamanhoPosicao = 1.00
+    else if (scoreSwing >= 70)
+      tamanhoPosicao = 0.75 + (scoreSwing - 70) / 10 * 0.25
+    else if (scoreSwing >= 60)
+      tamanhoPosicao = 0.50 + (scoreSwing - 60) / 10 * 0.25
+    else if (scoreSwing >= 50)
+      tamanhoPosicao = 0.30 + (scoreSwing - 50) / 10 * 0.20
+    else if (scoreSwing >= 40)
+      tamanhoPosicao = 0.15 + (scoreSwing - 40) / 10 * 0.15
+    else
+      tamanhoPosicao = 0.15
+
+    const precoEntrada =
+    hoje.preco
   
-  if (qualidadeFinal < 70) {
-    qualidadeFinal *= 0.7
-  }
+  let precoSaida =
+    precoEntrada
   
-  if (qualidadeFinal < 50) {
-    continue
-  }
-
-
-    // 📊 REGIME
-    const regime = identificarRegime(precos, i)
-
-    // 🔥 TREND ENGINE
-    const trend = trendEngine(precos, dados, i)
-
-    if (!trend && regime === "neutro") continue
-
-    // 🔥 FILTRO DE TENDÊNCIA REAL
-    const cruzamentoFraco =
-  mm9 < mm21 &&
-  ((mm21 - mm9) / mm21) > 0.01
-
-if (cruzamentoFraco) continue
-    if (mm9 < mm21) continue
-    if (precos[i] < mm9) continue
-
-    // 📊 RSI
-    const rsi = calcularRSI(precos, 14, i)
-
-    if (!rsi || rsi < 45 || rsi > 70) continue
-
-    // 🌪️ filtro volatilidade extrema
-    if (volatilidade > 2.5) continue
-
-    // 📊 SCORE
-    const score = calcularScore({
-      variacao,
+  let maxLucro = 0
+  let j = i + 1
+  
+  let motivoSaida = "fim_periodo"
+  let tendenciaSegueNaSaida: boolean | null = null
+  let desalinhamentoConsecutivo = 0
+  
+  const atr =
+    calcularATR(dados, 14, i)
+  
+  if (!atr) continue
+  
+  const atrPercent =
+    (atr / precoEntrada) * 100
+  
+  const risco =
+    parametrosRisco(
+      contexto,
       volatilidade,
-      tendencia: "alta",
-      setor: "neutro"
-    })
-
-    let scoreMinimo = 70
-
-    if (regime === "explosao") {
-      scoreMinimo = 55
-    }
-    
-    if (regime === "lateral") {
-      scoreMinimo = 80
-    }
-    
-    if (score < scoreMinimo) continue
-
-    const sinal = gerarSinal(score)
-
-    // 🚀 ENTRADA
-    let tamanhoPosicao = 1
-    if (volatilidade > 2) {
-      tamanhoPosicao -= 0.5
-    }
-    
-    if (volatilidade < 1) {
-      tamanhoPosicao += 0.5
-    }
-
-    if (estrutural >= 90) {
-      tamanhoPosicao += 0.5
-    }
-    
-    if (forca >= 80) {
-      tamanhoPosicao += 0.5
-    }
-    
-    if (regime === "explosao") {
-      tamanhoPosicao += 0.5
-    }
-    const precoEntrada = hoje.preco
-
-    let precoSaida = precoEntrada
-    let maxLucro = 0
-
-    let j = i + 1
-
-    const stop = trend ? trend.stop : -5
-    const trailing = trend ? trend.trailing : 5
-
-    while (j < dados.length) {
-
-      const precoAtual = dados[j].preco
-
-      const variacaoAtual =
-        ((precoAtual - precoEntrada) / precoEntrada) * 100
-
-      if (variacaoAtual > maxLucro) {
-        maxLucro = variacaoAtual
-      }
-
-      // 🔥 trailing stop
-      if (maxLucro - variacaoAtual > trailing) {
-        precoSaida = precoAtual
-        break
-      }
-
-      // 🔥 stop loss
-      if (variacaoAtual < stop) {
-        precoSaida = precoAtual
-        break
-      }
-
-      // 📈 tendência continua?
-      const mm9Atual = media(precos, 9, j)
-      const mm21Atual = media(precos, 21, j)
-
-      precoSaida = precoAtual
-
-      j++
-    }
-    const retornoBase =
-    ((precoSaida - precoEntrada) / precoEntrada) * 100
+      atrPercent,
+      trendQuality
+    )
   
-  const retorno =
-    retornoBase * tamanhoPosicao
+  const stop = risco.stop
+  const trailing = risco.trailing
+  
+  while (j < dados.length) {
+    const precoAtual =
+      dados[j].preco
+  
+    const variacaoAtual =
+      ((precoAtual - precoEntrada) / precoEntrada) * 100
+  
+    if (variacaoAtual > maxLucro) {
+      maxLucro = variacaoAtual
+    }
+  
+    const mm9Atual = media(precos, 9, j)
+    const mm21Atual = media(precos, 21, j)
+    const mm50Atual = media(precos, 50, j)
+  
+    const tendenciaSegue =
+      mm9Atual &&
+      mm21Atual &&
+      mm50Atual &&
+      mm9Atual >= mm21Atual &&
+      mm21Atual >= mm50Atual
+
+    if (!tendenciaSegue && contexto === "tendencia_forte") {
+      desalinhamentoConsecutivo++
+    } else {
+      desalinhamentoConsecutivo = 0
+    }
+
+    const desalinhamentoConfirmado =
+      contexto === "tendencia_forte"
+        ? desalinhamentoConsecutivo >= 2
+        : !tendenciaSegue
+
+    const segurandoTendencia =
+      !desalinhamentoConfirmado &&
+      variacaoAtual > 0 &&
+      maxLucro > 1 &&
+      maxLucro - variacaoAtual < trailing * 2.5
+
+    if (
+      !segurandoTendencia &&
+      maxLucro - variacaoAtual > trailing
+    ) {
+      precoSaida = precoAtual
+      motivoSaida = "trailing_stop"
+      tendenciaSegueNaSaida = !!tendenciaSegue
+      break
+    }
+  
+    if (variacaoAtual < stop) {
+      precoSaida = precoAtual
+      motivoSaida = "stop_loss"
+      break
+    }
+  
+    precoSaida = precoAtual
+    j++
+  }
+  
+  let maiorPrecoDepois = precoSaida
+  
+  for (
+    let k = j;
+    k < Math.min(j + 20, dados.length);
+    k++
+  ) {
+    if (dados[k].preco > maiorPrecoDepois) {
+      maiorPrecoDepois = dados[k].preco
+    }
+  }
+  
+  const lucroPerdido =
+    ((maiorPrecoDepois - precoSaida) / precoSaida) * 100
+  
+  const diasOperacao =
+    j - i
+
+    const retornoBase =
+      ((precoSaida - precoEntrada) / precoEntrada) * 100
+
+    const retorno =
+      retornoBase * tamanhoPosicao
 
     capital *= (1 + retorno / 100)
 
-if (capital > picoCapital) {
-  picoCapital = capital
-}
+    if (capital > picoCapital) {
+      picoCapital = capital
+    }
 
-const drawdownAtual =
-  ((picoCapital - capital) / picoCapital) * 100
+    const drawdownAtual =
+      ((picoCapital - capital) / picoCapital) * 100
 
-  if (drawdownAtual > 12) {
-    console.log(
-      "🛑 MODO DEFENSIVO ATIVADO"
-    )
-  
-    break
-  }
+    const trendScore =
+      trendQuality
+
+    const momentumFinal =
+      momentumScore
+
+    const riskScore =
+      Math.max(0, 100 - volatilidade * 20)
+
+    const estruturalFinal =
+      estrutural
+
 
     resultados.push({
       data: hoje.data,
-      score,
+      score: scoreSwing,
       sinal,
-      retorno
+      retorno,
+
+      diagnostico: diagnostico.decisao,
+      contexto,
+      setup: tipoSetup,
+
+      trendScore,
+      momentumFinal,
+      riskScore,
+      estruturalFinal,
+      motivoSaida,
+      diasOperacao,
+      lucroPerdido,
+      tendenciaSegueNaSaida,
     })
 
-    // 🔥 evita trades repetidos
-    i = j
+    if (drawdownAtual > 18) {
+      bloqueiosDefensivo++
+    
+      console.log(
+        "🛑 MODO DEFENSIVO ATIVADO"
+      )
+    
+      cooldown = 5
+    }
+
+    i = Math.max(i + 1, j - 3)
   }
+
+  console.log("🛡️ Bloqueios Defensivos:", bloqueiosDefensivo)
+  console.log("📉 Bloqueios Score:", bloqueiosScore)
 
   return {
     resultados,
@@ -628,8 +544,10 @@ export function avaliar(resultados: any[]) {
   let capital = 100
   let pico = 100
   let maxDrawdown = 0
+  
 
   const custo = 0.2
+  const trades: number[] = []
 
   resultados.forEach(r => {
     total++
@@ -637,36 +555,136 @@ export function avaliar(resultados: any[]) {
     let lucroTrade = 0
 
     if (r.sinal.includes("entrada")) {
-
       lucroTrade = r.retorno - custo
 
       if (lucroTrade > 0) {
         acertos++
       }
-
     } else if (r.sinal.includes("venda")) {
-
       lucroTrade = -r.retorno - custo
 
       if (lucroTrade > 0) {
         acertos++
       }
+    } else {
+      return
     }
 
-    lucro += lucroTrade
+    trades.push(lucroTrade)
 
+    console.log(
+      "🎯 TRADE:",
+      lucroTrade.toFixed(2)
+    )
+
+    lucro += lucroTrade
     capital *= (1 + lucroTrade / 100)
 
     if (capital > pico) {
       pico = capital
     }
 
-    const drawdown = (pico - capital) / pico
+    const drawdown =
+      (pico - capital) / pico
 
     if (drawdown > maxDrawdown) {
       maxDrawdown = drawdown
     }
   })
+
+  const lucroBruto =
+    trades
+      .filter(t => t > 0)
+      .reduce((a, b) => a + b, 0)
+
+  const prejuizoBruto =
+    Math.abs(
+      trades
+        .filter(t => t < 0)
+        .reduce((a, b) => a + b, 0)
+    )
+
+  const profitFactor =
+    prejuizoBruto > 0
+      ? lucroBruto / prejuizoBruto
+      : lucroBruto
+
+  const ganhos =
+    trades.filter(t => t > 0)
+
+  const perdas =
+    trades.filter(t => t < 0)
+
+  const ganhoMedio =
+    ganhos.length > 0
+      ? ganhos.reduce((a, b) => a + b, 0) / ganhos.length
+      : 0
+
+  const perdaMedia =
+    perdas.length > 0
+      ? Math.abs(perdas.reduce((a, b) => a + b, 0) / perdas.length)
+      : 0
+
+  const winRate =
+    trades.length > 0
+      ? ganhos.length / trades.length
+      : 0
+
+  const lossRate =
+    trades.length > 0
+      ? perdas.length / trades.length
+      : 0
+
+  let volatilidade = 0
+  let sharpe = 0
+  let expectancy = 0
+
+  if (trades.length >= 2) {
+    const mediaRetornos =
+      trades.reduce((a, b) => a + b, 0) / trades.length
+
+    const variancia =
+      trades.reduce(
+        (acc, r) =>
+          acc + Math.pow(r - mediaRetornos, 2),
+        0
+      ) / (trades.length - 1)
+
+    volatilidade =
+      variancia > 0
+        ? Math.sqrt(variancia)
+        : 0
+
+    sharpe =
+      volatilidade > 0
+        ? mediaRetornos / volatilidade
+        : 0
+
+    expectancy =
+      (winRate * ganhoMedio) -
+      (lossRate * perdaMedia)
+  }
+
+  let perdasConsecutivas = 0
+  let maxPerdasConsecutivas = 0
+
+  for (const trade of trades) {
+    if (trade < 0) {
+      perdasConsecutivas++
+
+      if (perdasConsecutivas > maxPerdasConsecutivas) {
+        maxPerdasConsecutivas = perdasConsecutivas
+      }
+    } else {
+      perdasConsecutivas = 0
+    }
+  }
+
+  console.log("📊 Profit Factor:", profitFactor.toFixed(2))
+  console.log("🧠 Expectancy:", expectancy.toFixed(2))
+  console.log("📉 Volatilidade:", volatilidade.toFixed(2))
+  console.log("⚡ Sharpe:", sharpe.toFixed(2))
+  console.log("💀 Max Loss Streak:", maxPerdasConsecutivas)
 
   return {
     taxaAcerto:
@@ -674,7 +692,8 @@ export function avaliar(resultados: any[]) {
         ? (acertos / total) * 100
         : 0,
 
-    lucroTotal: Number(lucro.toFixed(2)),
+    lucroTotal:
+      Number(lucro.toFixed(2)),
 
     lucroMedio:
       total > 0
@@ -687,6 +706,20 @@ export function avaliar(resultados: any[]) {
     capitalFinal:
       Number(capital.toFixed(2)),
 
-    totalTrades: total
+    totalTrades: total,
+
+    profitFactor:
+      Number(profitFactor.toFixed(2)),
+
+    expectancy:
+      Number(expectancy.toFixed(2)),
+
+    volatilidade:
+      Number(volatilidade.toFixed(2)),
+
+    sharpe:
+      Number(sharpe.toFixed(2)),
+
+    maxPerdasConsecutivas
   }
 }

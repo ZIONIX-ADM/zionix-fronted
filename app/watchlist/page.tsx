@@ -19,7 +19,7 @@ export default function Watchlist() {
 
         const ativosComDados = await Promise.all(
           saved.map(async (ticker: string) => {
-            const res = await fetch(`http://localhost:8000/buscar/${ticker}`)
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/buscar/${ticker}`)
             const data = await res.json()
 
             const variacao = data.variacao_percentual ?? 0

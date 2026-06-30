@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# gerados localmente
+dataset-trades.json
+
+# Claude Code config local
+.claude/
