@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { calcularScore, gerarCenario, gerarSinal } from "../core/score"
+import { calcularScoreDiagnostico, gerarCenario, gerarRecomendacao } from "../core/score"
 export default function Watchlist() {
   const [ativos, setAtivos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -22,32 +22,29 @@ export default function Watchlist() {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/buscar/${ticker}`)
             const data = await res.json()
 
+            const setor = data.setor ?? ""
             const variacao = data.variacao_percentual ?? 0
-const volatilidade = Math.abs(variacao)
 
-const tendencia =
-  variacao > 0.5 ? "alta" :
-  variacao < -0.5 ? "queda" :
-  "lateral"
+            const diagnostico = calcularScoreDiagnostico({
+              precos: data.grafico?.precos ?? [],
+              highs: data.grafico?.highs ?? [],
+              lows: data.grafico?.lows ?? [],
+              datas: data.grafico?.datas ?? [],
+              mercado: data.mercado ?? "neutro",
+              setor
+            })
 
-const setor = data.setor ?? ""
+            const score = diagnostico.score
+            const sinal = gerarRecomendacao(score)
+            const cenario = gerarCenario(variacao)
 
-const score = calcularScore({
-  variacao,
-  volatilidade,
-  tendencia,
-  setor
-})
-
-const sinal = gerarSinal(score)
-const cenario = gerarCenario(variacao)
-
-return {
-  ...data,
-  score,
-  sinal,
-  cenario
-} })
+            return {
+              ...data,
+              score,
+              sinal,
+              cenario
+            }
+          })
         )
 
         setAtivos(ativosComDados)
@@ -90,13 +87,13 @@ return {
           const variacaoPositiva = ativo.variacao_percentual >= 0
 
           const corBorda =
-            ativo.sinal?.includes("entrada") ? "border-green-500" :
-            ativo.sinal?.includes("venda") ? "border-red-500" :
+            ativo.sinal?.includes("Compra") ? "border-green-500" :
+            ativo.sinal === "Cautela" || ativo.sinal === "Evitar" ? "border-red-500" :
             "border-gray-200"
 
           const badgeCor =
-            ativo.sinal?.includes("entrada") ? "bg-green-100 text-green-700" :
-            ativo.sinal?.includes("venda") ? "bg-red-100 text-red-700" :
+            ativo.sinal?.includes("Compra") ? "bg-green-100 text-green-700" :
+            ativo.sinal === "Cautela" || ativo.sinal === "Evitar" ? "bg-red-100 text-red-700" :
             "bg-gray-100 text-gray-600"
 
           return (
@@ -136,7 +133,7 @@ return {
                 ativo.score >= 40 ? "text-yellow-600" :
                 "text-red-600"
               }`}>
-                Score: {ativo.score}
+                Score: {Math.round(ativo.score)}
               </p>
 
               {/* CENÁRIO */}
