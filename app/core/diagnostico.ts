@@ -30,7 +30,7 @@ export function gerarDiagnosticoDiario({
   entradaConfirmada: boolean
   forca: number
 }): { score: number; decisao: Decisao } {
-  let score = 50
+  let score = 30
 
   if (contexto === "tendencia_forte") score += 22
   if (contexto === "pullback") score += 14
@@ -49,8 +49,8 @@ export function gerarDiagnosticoDiario({
     estrutural * 0.70 +
     forca * 0.30
 
-  score += scoreTecnico * 0.40
-  score += scoreFundacao * 0.25
+  score += scoreTecnico * 0.20
+  score += scoreFundacao * 0.15
 
   score += Math.max(0, Math.min(5, (forca - 70) / 30 * 5))
 
@@ -72,6 +72,8 @@ export function gerarDiagnosticoDiario({
   else score -= 3
 
   score = Math.max(0, Math.min(100, score))
+
+  if (!entradaConfirmada) score = Math.min(score, 67)
 
   let decisao: Decisao = "aguardar"
   if (score >= 68) decisao = "comprar"
