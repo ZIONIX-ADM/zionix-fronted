@@ -3,7 +3,7 @@
 import AIInterpretation from "./component/AIInterpretation"
 import InfoTooltip from "./component/Tooltip"
 import { TOOLTIPS } from "./component/tooltips"
-import { calcularScoreDiagnostico, gerarCenario, gerarRecomendacao } from "./core/score"
+import { gerarCenario, gerarRecomendacao } from "./core/score"
 import { useState, useEffect } from "react"
 import {
   LineChart,
@@ -29,26 +29,16 @@ export default function Home() {
   const [mostrarGrafico, setMostrarGrafico] = useState(false)
   const [watchlist, setWatchlist] = useState<string[]>([])
   const [ranking, setRanking] = useState<any[]>([])
+  const [ultimoBatch, setUltimoBatch] = useState<string | null>(null)
   const [leituraIA, setLeituraIA] = useState<string>("")
   const [leituraLoading, setLeituraLoading] = useState(false)
   const [filtroSinal, setFiltroSinal] = useState("Todas")
 
   const variacao = resultado?.variacao_percentual ?? 0
-  const setor = resultado?.setor ?? ""
 
-  const diagnostico = resultado
-    ? calcularScoreDiagnostico({
-        precos: resultado.grafico?.precos ?? [],
-        highs: resultado.grafico?.highs ?? [],
-        lows: resultado.grafico?.lows ?? [],
-        datas: resultado.grafico?.datas ?? [],
-        mercado: resultado.mercado ?? "neutro",
-        setor,
-      })
-    : { score: 0, decisao: "aguardar" }
-
-  const score = diagnostico.score
-  const sinal = gerarRecomendacao(score)
+  // Score vem sempre do banco (suavizado pelo batch) — nunca calculado ao vivo
+  const score: number = resultado?.score ?? 0
+  const sinal: string = resultado?.sinal ?? gerarRecomendacao(score)
   const cenario = gerarCenario(variacao)
 
   const dadosGrafico =
@@ -57,7 +47,14 @@ export default function Home() {
       preco: resultado?.grafico?.precos?.[i],
     })) || []
 
-  const horaAtual = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+  // Timestamp formatado do último batch (hora de Brasília)
+  const timestampBatch = ultimoBatch
+    ? new Date(ultimoBatch).toLocaleString("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+        day: "2-digit", month: "2-digit",
+        hour: "2-digit", minute: "2-digit",
+      })
+    : "—"
 
   async function buscar() {
     if (!ticker) return
@@ -75,23 +72,17 @@ export default function Home() {
 
   useEffect(() => {
     if (!resultado || resultado.nao_elegivel) return
-    const diag = calcularScoreDiagnostico({
-      precos: resultado.grafico?.precos ?? [],
-      highs: resultado.grafico?.highs ?? [],
-      lows: resultado.grafico?.lows ?? [],
-      datas: resultado.grafico?.datas ?? [],
-      mercado: resultado.mercado ?? "neutro",
-      setor: resultado.setor ?? "",
-    })
+    const scoreDb = resultado.score ?? 0
+    const decisaoDb = resultado.decisao ?? "aguardar"
     const fallback = resultado.interpretacao_grafico || "Análise técnica processada pelo motor Zionix."
     setLeituraLoading(true)
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analise-ia/${resultado.ticker}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        score: diag.score,
-        decisao: diag.decisao,
-        sinal: gerarRecomendacao(diag.score),
+        score: scoreDb,
+        decisao: decisaoDb,
+        sinal: resultado.sinal ?? gerarRecomendacao(scoreDb),
         mercado: resultado.mercado ?? "neutro",
         setor: resultado.setor ?? "",
         nome: resultado.nome ?? resultado.ticker,
@@ -114,7 +105,12 @@ export default function Home() {
         await fetch(`${process.env.NEXT_PUBLIC_API_URL}/health`).catch(() => {})
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ranking?limite=20`)
         const data = await res.json()
-        setRanking(Array.isArray(data) ? data : [])
+        if (data.ativos) {
+          setRanking(data.ativos)
+          setUltimoBatch(data.ultimo_batch ?? null)
+        } else if (Array.isArray(data)) {
+          setRanking(data) // fallback formato antigo
+        }
       } catch (err) {
         console.error("Erro ao carregar ranking:", err)
       }
@@ -234,7 +230,7 @@ export default function Home() {
             {/* Status line */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#6b6b6b", fontSize: 12 }}>
               <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#3fb378", display: "inline-block" }} className="pulse-dot" />
-              Mercado B3 · dados atualizados às {horaAtual}
+              Mercado B3 · último batch: {timestampBatch}
             </div>
           </div>
         </section>
