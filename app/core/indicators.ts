@@ -118,6 +118,116 @@ export function trendEngine(
   return null
 }
 
+/**
+ * EMA (Exponential Moving Average) — base para MACD.
+ * Inicializa com SMA dos primeiros `periodo` candles, depois aplica EMA iterativo.
+ */
+export function calcularEMA(precos: number[], periodo: number, index: number): number | null {
+  if (index < periodo - 1 || precos.length < periodo) return null
+  const k = 2 / (periodo + 1)
+  let ema = 0
+  for (let i = 0; i < periodo; i++) ema += precos[i]
+  ema /= periodo
+  for (let i = periodo; i <= index; i++) {
+    ema = precos[i] * k + ema * (1 - k)
+  }
+  return ema
+}
+
+/**
+ * MACD (12, 26, 9).
+ * Retorna {macd, signal, histogram} — todos valores contínuos em unidade de preço.
+ * Normalizar pelo ATR antes de usar em scores.
+ */
+export function calcularMACD(
+  precos: number[],
+  index: number
+): { macd: number; signal: number; histogram: number } | null {
+  // Precisa de 26 pts (lento) + 9 pts (signal warmup)
+  if (index < 34) return null
+
+  // Calcula MACD nos últimos 9 pontos para derivar a signal line
+  const macdSeries: number[] = []
+  for (let j = index - 8; j <= index; j++) {
+    const e12 = calcularEMA(precos, 12, j)
+    const e26 = calcularEMA(precos, 26, j)
+    if (e12 === null || e26 === null) return null
+    macdSeries.push(e12 - e26)
+  }
+
+  // EMA(9) da série MACD = signal line
+  const k9 = 2 / (9 + 1)
+  let signal = macdSeries[0]
+  for (let j = 1; j < macdSeries.length; j++) {
+    signal = macdSeries[j] * k9 + signal * (1 - k9)
+  }
+
+  const macd = macdSeries[macdSeries.length - 1]
+  return { macd, signal, histogram: macd - signal }
+}
+
+/**
+ * ADX (Average Directional Index) com Wilder smoothing.
+ * Retorna {adx, plusDI, minusDI} — adx em 0-100.
+ * adx > 25 = tendência significativa; adx > 40 = tendência forte.
+ */
+export function calcularADX(
+  dados: Candle[],
+  periodo: number,
+  index: number
+): { adx: number; plusDI: number; minusDI: number } | null {
+  if (index < periodo * 2) return null
+
+  const TR: number[] = []
+  const pDM: number[] = []
+  const mDM: number[] = []
+
+  for (let i = 1; i <= index; i++) {
+    const curr = dados[i]
+    const prev = dados[i - 1]
+    if (!curr || !prev) return null
+    const high = curr.high ?? curr.preco
+    const low = curr.low ?? curr.preco
+    const prevHigh = prev.high ?? prev.preco
+    const prevLow = prev.low ?? prev.preco
+    const prevClose = prev.close ?? prev.preco
+
+    TR.push(Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose)))
+    const upMove = high - prevHigh
+    const downMove = prevLow - low
+    pDM.push(upMove > downMove && upMove > 0 ? upMove : 0)
+    mDM.push(downMove > upMove && downMove > 0 ? downMove : 0)
+  }
+
+  // Wilder smoothing (alpha = 1/periodo)
+  const alpha = 1 / periodo
+  let sTR = TR.slice(0, periodo).reduce((a, b) => a + b, 0)
+  let sPDM = pDM.slice(0, periodo).reduce((a, b) => a + b, 0)
+  let sMDM = mDM.slice(0, periodo).reduce((a, b) => a + b, 0)
+
+  const DX: number[] = []
+  for (let i = periodo; i < TR.length; i++) {
+    sTR = sTR * (1 - alpha) + TR[i]
+    sPDM = sPDM * (1 - alpha) + pDM[i]
+    sMDM = sMDM * (1 - alpha) + mDM[i]
+    const pdi = sTR > 0 ? (100 * sPDM / sTR) : 0
+    const mdi = sTR > 0 ? (100 * sMDM / sTR) : 0
+    DX.push((pdi + mdi) > 0 ? 100 * Math.abs(pdi - mdi) / (pdi + mdi) : 0)
+  }
+
+  if (DX.length < periodo) return null
+
+  // ADX = Wilder smooth de DX
+  let adx = DX.slice(0, periodo).reduce((a, b) => a + b, 0) / periodo
+  for (let i = periodo; i < DX.length; i++) {
+    adx = adx * (1 - alpha) + DX[i] * alpha
+  }
+
+  const pdi = sTR > 0 ? (100 * sPDM / sTR) : 0
+  const mdi = sTR > 0 ? (100 * sMDM / sTR) : 0
+  return { adx, plusDI: pdi, minusDI: mdi }
+}
+
 export function pullbackEngine(
   precos: number[],
   dados: Candle[],

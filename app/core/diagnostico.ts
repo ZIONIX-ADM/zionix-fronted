@@ -16,7 +16,10 @@ export function gerarDiagnosticoDiario({
   rsi,
   mercado,
   condicoesEntrada,
-  forca
+  forca,
+  macdNorm = 0,
+  adxValue = 15,
+  adxDirecaoBull = true,
 }: {
   contexto: string
   setup: { tipo: string }
@@ -29,6 +32,12 @@ export function gerarDiagnosticoDiario({
   mercado: string
   condicoesEntrada: number  // 0, 1, 2 ou 3 condições atendidas (era boolean)
   forca: number
+  /** MACD histogram normalizado pelo ATR (adimensional). Positivo = momentum bullish. */
+  macdNorm?: number
+  /** ADX(14) em 0-100. >25 = tendência relevante, >40 = forte. Default 25 = neutro. */
+  adxValue?: number
+  /** true se +DI > -DI (tendência de alta). Inverte contribuição ADX se falso. */
+  adxDirecaoBull?: boolean
 }): { score: number; decisao: Decisao } {
   let score = 30
 
@@ -67,6 +76,17 @@ export function gerarDiagnosticoDiario({
     score -= 8
     if (contexto !== "tendencia_forte" && contexto !== "pullback") score -= 5
   }
+
+  // MACD: momentum contínuo. histogram normalizado pelo ATR (adimensional).
+  // Range esperado: -3 a +3. Mapeado para -8 a +10 pts no score.
+  const macdContrib = Math.max(-8, Math.min(10, macdNorm * 4))
+  score += macdContrib
+
+  // ADX: força da tendência. Contribui 0-12 pts quando tendência é sólida (>25).
+  // Sem contribuição se ADX < 15 (mercado sem direção). Penalidade suave se direção
+  // é baixista (+DI < -DI) — ativo com força bearish não deve ganhar bônus de ADX.
+  const adxBase = Math.max(0, Math.min(12, (adxValue - 15) / 2.5))
+  score += adxDirecaoBull ? adxBase : -adxBase * 0.5
 
   // Correção 2: penalidade gradual por condições de entrada não atendidas.
   // Substitui o hard cap em 67 — escala suave sem corte abrupto.

@@ -3,6 +3,8 @@ import {
   media,
   calcularRSI,
   calcularATR,
+  calcularMACD,
+  calcularADX,
   classificarContexto,
   trendEngine,
   pullbackEngine
@@ -94,7 +96,6 @@ export function calcularScoreDiagnostico({
   if (!rsi) return INSUFICIENTE
 
   const estrutural = calcularScoreEstrutural(dados)
-
   const forca = forcaFromSetor(setor)
 
   const ontem = precos[i - 1]
@@ -103,6 +104,16 @@ export function calcularScoreDiagnostico({
     (mm9 > mm21 ? 1 : 0) +
     (precos[i] > mm50 ? 1 : 0)
   )
+
+  // MACD e ADX — componentes contínuos novos (Fase 2)
+  const atr = calcularATR(dados, 14, i)
+  const macdResult = calcularMACD(precos, i)
+  const adxResult = calcularADX(dados, 14, i)
+
+  // Normaliza histograma MACD pelo ATR (adimensional, independente de preço)
+  const macdNorm = macdResult && atr > 0 ? macdResult.histogram / atr : 0
+  const adxValue = adxResult ? adxResult.adx : 25
+  const adxDirecaoBull = adxResult ? adxResult.plusDI >= adxResult.minusDI : true
 
   return gerarDiagnosticoDiario({
     contexto,
@@ -115,7 +126,10 @@ export function calcularScoreDiagnostico({
     rsi,
     mercado,
     condicoesEntrada,
-    forca
+    forca,
+    macdNorm,
+    adxValue,
+    adxDirecaoBull,
   })
 }
 
