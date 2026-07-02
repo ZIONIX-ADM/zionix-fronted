@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { calcularScoreDiagnostico, gerarCenario, gerarRecomendacao } from "../core/score"
+import Tooltip from "../component/Tooltip"
+import { TOOLTIPS } from "../component/tooltips"
 export default function Watchlist() {
   const [ativos, setAtivos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -133,7 +135,7 @@ export default function Watchlist() {
                 ativo.score >= 40 ? "text-yellow-600" :
                 "text-red-600"
               }`}>
-                Score: {Math.round(ativo.score)}
+                Score: {Math.round(ativo.score)} <Tooltip text={TOOLTIPS.score} />
               </p>
 
               {/* CENÁRIO */}

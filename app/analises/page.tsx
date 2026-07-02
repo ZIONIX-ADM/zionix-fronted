@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Tooltip from "../component/Tooltip"
+import { TOOLTIPS } from "../component/tooltips"
 
 type AtivoCard = { ticker: string; nome?: string; score: number; sinal: string }
 
@@ -47,7 +49,7 @@ export default function AnalisesPage() {
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/analises`)
       .then(r => r.json())
-      .then(d => { setData(d); setLoading(false) })
+      .then(d => { if (d && !d.erro && d.distribuicao) setData(d); setLoading(false) })
       .catch(() => setLoading(false))
   }, [])
 
@@ -98,8 +100,9 @@ export default function AnalisesPage() {
                 {data.mercado === "bull" ? "↑" : data.mercado === "bear" ? "↓" : "→"}
               </div>
               <div>
-                <p className="font-semibold text-gray-900">
+                <p className="font-semibold text-gray-900 flex items-center gap-1">
                   Mercado em <span style={{ color: mercadoInfo!.cor }}>{mercadoInfo!.label}</span>
+                  <Tooltip text={TOOLTIPS.regimeMercado} position="bottom" />
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5">{mercadoInfo!.desc}</p>
               </div>
@@ -228,7 +231,7 @@ export default function AnalisesPage() {
 
               {/* Top momentum */}
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <p className="text-xs text-gray-400 mb-3 font-medium">Top Momentum</p>
+                <p className="text-xs text-gray-400 mb-3 font-medium flex items-center gap-1">Top Momentum <Tooltip text={TOOLTIPS.momentum} position="bottom" /></p>
                 <div className="space-y-3">
                   {data.destaques.top_momentum.map(a => (
                     <div key={a.ticker} className="flex items-center gap-3">
@@ -250,7 +253,7 @@ export default function AnalisesPage() {
 
               {/* Top estrutural */}
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <p className="text-xs text-gray-400 mb-3 font-medium">Top Estrutural</p>
+                <p className="text-xs text-gray-400 mb-3 font-medium flex items-center gap-1">Top Estrutural <Tooltip text={TOOLTIPS.estrutural} position="bottom" /></p>
                 <div className="space-y-3">
                   {data.destaques.top_estrutural.map(a => (
                     <div key={a.ticker} className="flex items-center gap-3">

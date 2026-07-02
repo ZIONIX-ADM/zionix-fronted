@@ -2,6 +2,8 @@
 
 import AIInterpretation from "./component/AIInterpretation"
 import RankingCard from "./component/RankingCard"
+import InfoTooltip from "./component/Tooltip"
+import { TOOLTIPS } from "./component/tooltips"
 import { calcularScoreDiagnostico, gerarCenario, gerarRecomendacao } from "./core/score"
 import { useState, useEffect } from "react"
 import {
@@ -9,7 +11,7 @@ import {
   Line,
   XAxis,
   YAxis,
-  Tooltip,
+  Tooltip as ChartTooltip,
   ResponsiveContainer
 } from "recharts"
 
@@ -261,8 +263,8 @@ export default function Home() {
                     {sinal}
                   </span>
                   {resultado.mercado && (
-                    <span className="text-xs px-3 py-1 rounded-full font-medium" style={{ background: mercadoBadge.bg, color: mercadoBadge.color }}>
-                      {mercadoBadge.label}
+                    <span className="inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full font-medium" style={{ background: mercadoBadge.bg, color: mercadoBadge.color }}>
+                      {mercadoBadge.label} <InfoTooltip text={TOOLTIPS.regimeMercado} position="bottom" />
                     </span>
                   )}
                 </div>
@@ -270,7 +272,7 @@ export default function Home() {
                 {/* Score */}
                 <div className="mt-4">
                   <div className="flex justify-between text-xs text-gray-400 mb-1">
-                    <span>Score</span>
+                    <span className="flex items-center gap-1">Score <InfoTooltip text={TOOLTIPS.score} /></span>
                     <span className="font-bold text-gray-900">{Math.round(score)}</span>
                   </div>
                   <div className="h-2 bg-gray-100 rounded-full">
@@ -293,7 +295,7 @@ export default function Home() {
                       <LineChart data={dadosGrafico}>
                         <XAxis dataKey="data" tick={{ fontSize: 10 }} />
                         <YAxis tick={{ fontSize: 10 }} />
-                        <Tooltip />
+                        <ChartTooltip />
                         <Line type="monotone" dataKey="preco" stroke="#C9A84C" strokeWidth={2} dot={false} />
                       </LineChart>
                     </ResponsiveContainer>
