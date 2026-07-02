@@ -93,8 +93,11 @@ export function calcularScoreDiagnostico({
   const forca = forcaFromSetor(setor)
 
   const ontem = precos[i - 1]
-  const entradaConfirmada =
-    precos[i] > ontem && mm9 > mm21 && precos[i] > mm50
+  const condicoesEntrada = (
+    (precos[i] > ontem ? 1 : 0) +
+    (mm9 > mm21 ? 1 : 0) +
+    (precos[i] > mm50 ? 1 : 0)
+  )
 
   return gerarDiagnosticoDiario({
     contexto,
@@ -106,22 +109,15 @@ export function calcularScoreDiagnostico({
     volatilidade,
     rsi,
     mercado,
-    entradaConfirmada,
+    condicoesEntrada,
     forca
   })
 }
 
-function forcaFromSetor(setor: string): number {
-  const s = setor.toLowerCase()
-  if (s.includes("financeiro")) return 90
-  if (s.includes("utilidade") || s.includes("energia")) return 85
-  if (s.includes("materiais") || s.includes("petróleo") || s.includes("petroleo")) return 80
-  if (s.includes("indústria") || s.includes("industria")) return 70
-  if (s.includes("consumo não") || s.includes("defensivo") || s.includes("alimentação") || s.includes("alimentacao")) return 65
-  if (s.includes("comunicação") || s.includes("comunicacao")) return 60
-  if (s.includes("tecnologia")) return 50
-  if (s.includes("consumo c") || s.includes("varejo")) return 35
-  if (s.includes("imobiliário") || s.includes("imobiliario") || s.includes("construção") || s.includes("construcao")) return 25
+function forcaFromSetor(_setor: string): number {
+  // Retorna neutro para todos os setores até termos dados reais por ativo.
+  // O viés fixo por setor (Financeiro=90, Varejo=35 etc.) causava até ±6 pts
+  // de distorção sistemática independente do ativo específico.
   return 50
 }
 

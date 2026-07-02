@@ -15,7 +15,7 @@ export function gerarDiagnosticoDiario({
   volatilidade,
   rsi,
   mercado,
-  entradaConfirmada,
+  condicoesEntrada,
   forca
 }: {
   contexto: string
@@ -27,7 +27,7 @@ export function gerarDiagnosticoDiario({
   volatilidade: number
   rsi: number
   mercado: string
-  entradaConfirmada: boolean
+  condicoesEntrada: number  // 0, 1, 2 ou 3 condições atendidas (era boolean)
   forca: number
 }): { score: number; decisao: Decisao } {
   let score = 30
@@ -68,12 +68,19 @@ export function gerarDiagnosticoDiario({
     if (contexto !== "tendencia_forte" && contexto !== "pullback") score -= 5
   }
 
-  if (entradaConfirmada) score += 5
-  else score -= 3
+  // Correção 2: penalidade gradual por condições de entrada não atendidas.
+  // Substitui o hard cap em 67 — escala suave sem corte abrupto.
+  // 3/3 → +5 pts (entrada totalmente confirmada)
+  // 2/3 → -3 pts (mesmo que o antigo penalidade base)
+  // 1/3 → -6 pts
+  // 0/3 → -9 pts (máximo: 3x o antigo -3, sem cap artificial)
+  if (condicoesEntrada === 3) {
+    score += 5
+  } else {
+    score -= (3 - condicoesEntrada) * 3
+  }
 
   score = Math.max(0, Math.min(100, score))
-
-  if (!entradaConfirmada) score = Math.min(score, 67)
 
   let decisao: Decisao = "aguardar"
   if (score >= 68) decisao = "comprar"

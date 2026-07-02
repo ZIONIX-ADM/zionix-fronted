@@ -304,10 +304,11 @@ export async function rodarBacktest(
 
     if (!rsi) continue
 
-    const entradaConfirmada =
-    hoje.preco > ontem.preco &&
-    mm9 > mm21 &&
-    hoje.preco > mm50
+    const condicoesEntrada = (
+      (hoje.preco > ontem.preco ? 1 : 0) +
+      (mm9 > mm21 ? 1 : 0) +
+      (hoje.preco > mm50 ? 1 : 0)
+    )
 
     const diagnostico =
       gerarDiagnosticoDiario({
@@ -320,7 +321,7 @@ export async function rodarBacktest(
         volatilidade,
         rsi,
         mercado,
-        entradaConfirmada,
+        condicoesEntrada,
         forca
       })
 
