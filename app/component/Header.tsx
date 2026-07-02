@@ -53,24 +53,11 @@ export default function Header() {
       >
         {/* LOGO */}
         <Link href="/" className="flex items-center gap-3 no-underline">
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              background: "#C9A84C",
-              borderRadius: 8,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            {/* Or mi'Tziyon simplified SVG */}
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <circle cx="10" cy="10" r="3.5" fill="#0a0a0a" />
-              <path d="M10 2 L10 5M10 15 L10 18M2 10 L5 10M15 10 L18 10" stroke="#0a0a0a" strokeWidth="1.8" strokeLinecap="round" />
-              <path d="M4.4 4.4 L6.5 6.5M13.5 13.5 L15.6 15.6M15.6 4.4 L13.5 6.5M6.5 13.5 L4.4 15.6" stroke="#0a0a0a" strokeWidth="1.4" strokeLinecap="round" />
-            </svg>
-          </div>
+          <img
+            src="/logo-zionix.png"
+            alt="Zionix"
+            style={{ width: 44, height: 44, objectFit: "contain" }}
+          />
           <div>
             <p style={{ color: "#ffffff", fontFamily: "var(--font-manrope), Manrope, sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: "0.14em", lineHeight: 1 }}>
               ZIONIX

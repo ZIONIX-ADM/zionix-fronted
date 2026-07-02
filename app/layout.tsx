@@ -18,6 +18,10 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Zionix",
   description: "Inteligência que gera valor",
+  icons: {
+    icon: "/logo-zionix.png",
+    apple: "/logo-zionix.png",
+  },
 }
 
 export default function RootLayout({
