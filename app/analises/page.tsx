@@ -50,6 +50,7 @@ export default function AnalisesPage() {
   const mercadoInfo = data ? (MERCADO_INFO[data.mercado] ?? MERCADO_INFO.neutro) : null
   const maxFaixa = data ? Math.max(...data.distribuicao.map(f => f.count)) : 1
   const maxSetor = data ? Math.max(...data.por_setor.map(s => s.score_medio)) : 1
+  const temSetores = data ? data.por_setor.some(s => s.setor !== "Outros") : false
 
   return (
     <main className="min-h-screen" style={{ background: "#f7f7f5", fontFamily: "Inter, system-ui, sans-serif" }}>
@@ -146,7 +147,7 @@ export default function AnalisesPage() {
           </section>
 
           {/* 3. POR SETOR */}
-          <section>
+          {temSetores && <section>
             <p className="text-xs font-semibold tracking-[0.15em] mb-4" style={{ color: "#9ca3af" }}>
               POR SETOR
             </p>
@@ -169,7 +170,7 @@ export default function AnalisesPage() {
                 </div>
               ))}
             </div>
-          </section>
+          </section>}
 
           {/* 4. DESTAQUES */}
           <section>
