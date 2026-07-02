@@ -26,7 +26,7 @@ export default function Header() {
           fontFamily: "var(--font-inter), Inter, sans-serif",
         }}
       >
-        <div className="flex items-center divide-x" style={{ divideColor: "rgba(255,255,255,.08)" }}>
+        <div className="flex items-center">
           {TICKER_STRIP.map((t, i) => (
             <div key={t.label} className="flex items-center gap-2 px-5" style={{ borderRight: i < TICKER_STRIP.length - 1 ? "1px solid rgba(255,255,255,.08)" : "none" }}>
               <span className="text-[11px] font-medium" style={{ color: "#8a8a8a" }}>{t.label}</span>
