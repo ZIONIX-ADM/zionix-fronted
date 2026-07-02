@@ -26,7 +26,12 @@ export function calcularScoreDiagnostico({
   mercado: string
   setor: string
 }): { score: number; decisao: string } {
-  if (precos.length < 55) return { score: 0, decisao: "aguardar" }
+  const INSUFICIENTE = { score: 0, decisao: "evitar" as const, insuficiente: true }
+
+  if (precos.length < 55) return INSUFICIENTE
+
+  // Rejeitar séries com NaN/Infinity (ativos com trading halt ou dados corrompidos)
+  if (precos.some(p => !isFinite(p) || p <= 0)) return INSUFICIENTE
 
   const dados: Candle[] = precos.map((preco, idx) => ({
     data: datas[idx] ?? "",
@@ -46,7 +51,7 @@ export function calcularScoreDiagnostico({
   const preco5DiasAtras = precos[i - 5]
 
   if (!mm9 || !mm21 || !mm50 || !mm50Anterior || !preco5DiasAtras) {
-    return { score: 0, decisao: "aguardar" }
+    return INSUFICIENTE
   }
 
   const variacao = ((precos[i] - precos[i - 1]) / precos[i - 1]) * 100
@@ -86,7 +91,7 @@ export function calcularScoreDiagnostico({
   }
 
   const rsi = calcularRSI(precos, 14, i)
-  if (!rsi) return { score: 0, decisao: "aguardar" }
+  if (!rsi) return INSUFICIENTE
 
   const estrutural = calcularScoreEstrutural(dados)
 
