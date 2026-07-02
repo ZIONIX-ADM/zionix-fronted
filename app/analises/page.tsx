@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react"
 
+type AtivoCard = { ticker: string; nome?: string; score: number; sinal: string }
+
 type Analises = {
   mercado: string
   total_ativos: number
@@ -12,6 +14,7 @@ type Analises = {
     top_momentum: { ticker: string; score: number; contexto: string; sinal: string }[]
     top_estrutural: { ticker: string; score: number; contexto: string; sinal: string }[]
   }
+  ativos_por_decisao: Record<string, AtivoCard[]>
 }
 
 const DECISAO_LABEL: Record<string, string> = {
@@ -39,6 +42,7 @@ const MERCADO_INFO: Record<string, { label: string; cor: string; desc: string }>
 export default function AnalisesPage() {
   const [data, setData] = useState<Analises | null>(null)
   const [loading, setLoading] = useState(true)
+  const [filtro, setFiltro] = useState<string | null>(null)
 
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/analises`)
@@ -101,24 +105,67 @@ export default function AnalisesPage() {
               </div>
             </div>
 
-            {/* Decisões */}
-            <div className="grid grid-cols-5 gap-2">
+            {/* Filtros por decisão */}
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setFiltro(null)}
+                className="px-4 py-2 rounded-xl text-sm font-semibold border transition"
+                style={filtro === null
+                  ? { background: "#0a0a0a", color: "#fff", borderColor: "#0a0a0a" }
+                  : { background: "#fff", color: "#374151", borderColor: "#e5e7eb" }}
+              >
+                Todos ({data.total_ativos})
+              </button>
               {["comprar", "manter", "aguardar", "cautela", "evitar"].map(d => {
                 const c = DECISAO_COLOR[d]
                 const count = data.por_decisao[d] ?? 0
+                const ativo = filtro === d
                 return (
-                  <div key={d} className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100 text-center">
-                    <p className="text-lg font-bold text-gray-900">{count}</p>
-                    <span
-                      className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-medium"
-                      style={c}
-                    >
-                      {DECISAO_LABEL[d]}
-                    </span>
-                  </div>
+                  <button
+                    key={d}
+                    onClick={() => setFiltro(filtro === d ? null : d)}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold border transition"
+                    style={ativo
+                      ? { background: c.color, color: "#fff", borderColor: c.color }
+                      : { background: "#fff", color: "#374151", borderColor: "#e5e7eb" }}
+                  >
+                    {DECISAO_LABEL[d]} ({count})
+                  </button>
                 )
               })}
             </div>
+
+            {/* Lista de ativos filtrados */}
+            {filtro && (
+              <div className="space-y-2 mt-2">
+                {(data.ativos_por_decisao[filtro] ?? []).map(a => {
+                  const c = DECISAO_COLOR[filtro]
+                  return (
+                    <div key={a.ticker} className="bg-white rounded-2xl px-5 py-4 shadow-sm border border-gray-100 flex items-center gap-4">
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold shrink-0"
+                        style={{ background: "#0a0a0a", color: "#C9A84C" }}
+                      >
+                        {a.ticker.slice(0, 3)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 text-sm">{a.ticker}</p>
+                        {a.nome && <p className="text-xs text-gray-400 truncate">{a.nome}</p>}
+                      </div>
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
+                        style={c}
+                      >
+                        {a.sinal}
+                      </span>
+                      <span className="text-sm font-bold text-gray-900 shrink-0 w-8 text-right">
+                        {Math.round(a.score)}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </section>
 
           {/* 2. DISTRIBUIÇÃO DE SCORES */}
