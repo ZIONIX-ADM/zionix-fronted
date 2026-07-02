@@ -53,11 +53,19 @@ export default function Header() {
       >
         {/* LOGO */}
         <Link href="/" className="flex items-center gap-3 no-underline">
-          <img
-            src="/logo-zionix.png"
-            alt="Zionix"
-            style={{ width: 44, height: 44, objectFit: "contain" }}
-          />
+          <div style={{
+            width: 44, height: 44, borderRadius: 10, background: "#0a0a0a",
+            border: "1px solid rgba(201,168,76,.2)",
+            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          }}>
+            <svg viewBox="0 0 48 48" fill="none" style={{ width: 32, height: 32 }}>
+              <circle cx="13" cy="18" r="6.5" fill="#C9A84C" opacity=".16"/>
+              <path d="M13 18 L24 32" stroke="#C9A84C" strokeWidth="2.2" strokeLinecap="round" opacity=".5"/>
+              <path d="M24 32 L28.5 27 L31.5 29 L35 15" stroke="#C9A84C" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/>
+              <circle cx="13" cy="18" r="2.7" fill="#C9A84C"/>
+              <circle cx="35" cy="15" r="3" fill="#C9A84C"/>
+            </svg>
+          </div>
           <div>
             <p style={{ color: "#ffffff", fontFamily: "var(--font-manrope), Manrope, sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: "0.14em", lineHeight: 1 }}>
               ZIONIX
