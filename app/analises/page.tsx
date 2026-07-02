@@ -20,26 +20,27 @@ type Analises = {
 }
 
 const DECISAO_LABEL: Record<string, string> = {
-  comprar: "Comprar",
-  manter: "Manter",
-  aguardar: "Aguardar",
-  cautela: "Cautela",
-  evitar: "Evitar",
+  comprar: "Comprar", manter: "Manter",
+  aguardar: "Aguardar", cautela: "Cautela", evitar: "Evitar",
 }
 
 const DECISAO_COLOR: Record<string, { bg: string; color: string }> = {
-  comprar:  { bg: "#dcfce7", color: "#166534" },
-  manter:   { bg: "#dbeafe", color: "#1e40af" },
-  aguardar: { bg: "#f3f4f6", color: "#374151" },
-  cautela:  { bg: "#fef9c3", color: "#854d0e" },
-  evitar:   { bg: "#fee2e2", color: "#991b1b" },
+  comprar:  { bg: "#e8f5ee", color: "#1a7a45" },
+  manter:   { bg: "#e8f0fe", color: "#1a3a9a" },
+  aguardar: { bg: "#f0f0f0", color: "#555" },
+  cautela:  { bg: "#fff3cd", color: "#8a5c00" },
+  evitar:   { bg: "#fdecea", color: "#a12d2d" },
 }
 
 const MERCADO_INFO: Record<string, { label: string; cor: string; desc: string }> = {
-  bull:   { label: "Alta", cor: "#16a34a", desc: "IBOV acima das médias móveis — ambiente favorável" },
-  bear:   { label: "Baixa", cor: "#dc2626", desc: "IBOV abaixo das médias móveis — ambiente de risco" },
-  neutro: { label: "Neutro", cor: "#6b7280", desc: "Mercado sem tendência definida — cautela recomendada" },
+  bull:   { label: "Alta", cor: "#1a7a45", desc: "IBOV acima das médias móveis — ambiente favorável" },
+  bear:   { label: "Baixa", cor: "#a12d2d", desc: "IBOV abaixo das médias móveis — ambiente de risco" },
+  neutro: { label: "Neutro", cor: "#555", desc: "Mercado sem tendência definida — cautela recomendada" },
 }
+
+const C = "#C9A84C"
+const DARK = "#0a0a0a"
+const MW = { maxWidth: 780, margin: "0 auto", padding: "0 24px" }
 
 export default function AnalisesPage() {
   const [data, setData] = useState<Analises | null>(null)
@@ -59,63 +60,78 @@ export default function AnalisesPage() {
   const temSetores = data ? data.por_setor.some(s => s.setor !== "Outros") : false
 
   return (
-    <main className="min-h-screen" style={{ background: "#f7f7f5", fontFamily: "Inter, system-ui, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#F4F2EC", fontFamily: "var(--font-inter), Inter, sans-serif" }}>
 
       {/* HERO */}
-      <section style={{ background: "#0a0a0a" }} className="w-full px-6 pt-10 pb-12 flex flex-col items-center">
-        <div
-          className="mb-5 text-xs font-semibold tracking-widest px-4 py-1.5 rounded-full"
-          style={{ border: "1px solid #C9A84C", color: "#C9A84C" }}
-        >
-          ANÁLISE DO MERCADO
+      <section style={{ background: DARK, paddingBottom: 48 }}>
+        <div style={{ ...MW, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 56, textAlign: "center" }}>
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 8,
+            border: `1px solid ${C}`, borderRadius: 999,
+            padding: "6px 16px", marginBottom: 20,
+          }}>
+            <span style={{ color: C, fontSize: 11, fontWeight: 700, letterSpacing: "0.16em" }}>ANÁLISE DO MERCADO</span>
+          </div>
+          <h1 style={{
+            fontFamily: "var(--font-manrope), Manrope, sans-serif",
+            fontWeight: 800, fontSize: "clamp(1.8rem, 4vw, 2.8rem)",
+            color: "#fff", lineHeight: 1.1, marginBottom: 12,
+          }}>
+            Panorama completo da B3
+          </h1>
+          <p style={{ color: "#6b7280", fontSize: 14, maxWidth: 380 }}>
+            Agregações em tempo real de {data?.total_ativos ?? "—"} ativos analisados.
+          </p>
         </div>
-        <h2 className="text-white text-center font-bold leading-tight mb-2"
-          style={{ fontSize: "clamp(1.6rem, 3.5vw, 2.4rem)" }}>
-          Panorama completo da B3
-        </h2>
-        <p className="text-center text-sm" style={{ color: "#6b7280", maxWidth: 400 }}>
-          Agregações em tempo real de {data?.total_ativos ?? "—"} ativos analisados.
-        </p>
       </section>
 
       {loading && (
-        <div className="flex justify-center py-20 text-gray-400 text-sm">Carregando análises...</div>
+        <div style={{ display: "flex", justifyContent: "center", padding: "80px 0", color: "#aaa", fontSize: 14 }}>
+          Carregando análises...
+        </div>
       )}
 
       {!loading && data && (
-        <div className="px-6 py-10 space-y-8" style={{ maxWidth: 720, margin: "0 auto" }}>
+        <div style={{ ...MW, paddingTop: 40, paddingBottom: 80, display: "flex", flexDirection: "column", gap: 36 }}>
 
           {/* 1. PULSO DO MERCADO */}
           <section>
-            <p className="text-xs font-semibold tracking-[0.15em] mb-4" style={{ color: "#9ca3af" }}>
-              PULSO DO MERCADO
-            </p>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", color: "#999", marginBottom: 14 }}>PULSO DO MERCADO</p>
 
-            {/* Regime */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-3 flex items-center gap-4">
-              <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold shrink-0"
-                style={{ background: mercadoInfo!.cor + "18", color: mercadoInfo!.cor }}
-              >
+            {/* Regime card */}
+            <div style={{
+              background: "#fff", borderRadius: 20, border: "1px solid #ebebeb",
+              padding: "18px 22px", display: "flex", alignItems: "center", gap: 16, marginBottom: 14,
+            }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: 14, flexShrink: 0,
+                background: mercadoInfo!.cor + "18",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 22, fontWeight: 700, color: mercadoInfo!.cor,
+              }}>
                 {data.mercado === "bull" ? "↑" : data.mercado === "bear" ? "↓" : "→"}
               </div>
               <div>
-                <p className="font-semibold text-gray-900 flex items-center gap-1">
-                  Mercado em <span style={{ color: mercadoInfo!.cor }}>{mercadoInfo!.label}</span>
+                <p style={{ fontWeight: 600, color: "#111", display: "flex", alignItems: "center", gap: 6 }}>
+                  Mercado em{" "}
+                  <span style={{ color: mercadoInfo!.cor }}>{mercadoInfo!.label}</span>
                   <Tooltip text={TOOLTIPS.regimeMercado} position="bottom" />
                 </p>
-                <p className="text-xs text-gray-400 mt-0.5">{mercadoInfo!.desc}</p>
+                <p style={{ fontSize: 12, color: "#aaa", marginTop: 3 }}>{mercadoInfo!.desc}</p>
               </div>
             </div>
 
             {/* Filtros por decisão */}
-            <div className="flex flex-wrap gap-2">
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               <button
                 onClick={() => setFiltro(null)}
-                className="px-4 py-2 rounded-xl text-sm font-semibold border transition"
-                style={filtro === null
-                  ? { background: "#0a0a0a", color: "#fff", borderColor: "#0a0a0a" }
-                  : { background: "#fff", color: "#374151", borderColor: "#e5e7eb" }}
+                style={{
+                  padding: "7px 16px", borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  border: "1px solid",
+                  background: filtro === null ? DARK : "#fff",
+                  color: filtro === null ? "#fff" : "#555",
+                  borderColor: filtro === null ? DARK : "#ddd",
+                }}
               >
                 Todos ({data.total_ativos})
               </button>
@@ -127,10 +143,13 @@ export default function AnalisesPage() {
                   <button
                     key={d}
                     onClick={() => setFiltro(filtro === d ? null : d)}
-                    className="px-4 py-2 rounded-xl text-sm font-semibold border transition"
-                    style={ativo
-                      ? { background: c.color, color: "#fff", borderColor: c.color }
-                      : { background: "#fff", color: "#374151", borderColor: "#e5e7eb" }}
+                    style={{
+                      padding: "7px 16px", borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                      border: "1px solid",
+                      background: ativo ? c.color : "#fff",
+                      color: ativo ? "#fff" : "#555",
+                      borderColor: ativo ? c.color : "#ddd",
+                    }}
                   >
                     {DECISAO_LABEL[d]} ({count})
                   </button>
@@ -138,30 +157,30 @@ export default function AnalisesPage() {
               })}
             </div>
 
-            {/* Lista de ativos filtrados */}
+            {/* Lista filtrada */}
             {filtro && (
-              <div className="space-y-2 mt-2">
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
                 {(data.ativos_por_decisao[filtro] ?? []).map(a => {
                   const c = DECISAO_COLOR[filtro]
                   return (
-                    <div key={a.ticker} className="bg-white rounded-2xl px-5 py-4 shadow-sm border border-gray-100 flex items-center gap-4">
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold shrink-0"
-                        style={{ background: "#0a0a0a", color: "#C9A84C" }}
-                      >
-                        {a.ticker.slice(0, 3)}
+                    <div key={a.ticker} style={{
+                      background: "#fff", borderRadius: 16, border: "1px solid #ebebeb",
+                      padding: "14px 18px", display: "flex", alignItems: "center", gap: 14,
+                    }}>
+                      <div style={{
+                        width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+                        background: DARK, display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        <span style={{ color: C, fontSize: 11, fontWeight: 800 }}>{a.ticker.slice(0, 3)}</span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 text-sm">{a.ticker}</p>
-                        {a.nome && <p className="text-xs text-gray-400 truncate">{a.nome}</p>}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontWeight: 700, color: "#111", fontSize: 13 }}>{a.ticker}</p>
+                        {a.nome && <p style={{ fontSize: 11, color: "#aaa", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.nome}</p>}
                       </div>
-                      <span
-                        className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
-                        style={c}
-                      >
+                      <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 999, background: c.bg, color: c.color, flexShrink: 0 }}>
                         {a.sinal}
                       </span>
-                      <span className="text-sm font-bold text-gray-900 shrink-0 w-8 text-right">
+                      <span style={{ fontSize: 15, fontWeight: 800, color: "#111", minWidth: 28, textAlign: "right", fontFamily: "var(--font-manrope), sans-serif" }}>
                         {Math.round(a.score)}
                       </span>
                     </div>
@@ -173,101 +192,98 @@ export default function AnalisesPage() {
 
           {/* 2. DISTRIBUIÇÃO DE SCORES */}
           <section>
-            <p className="text-xs font-semibold tracking-[0.15em] mb-4" style={{ color: "#9ca3af" }}>
-              DISTRIBUIÇÃO DE SCORES
-            </p>
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 space-y-3">
-              {data.distribuicao.map(f => (
-                <div key={f.faixa} className="flex items-center gap-3">
-                  <span className="text-xs text-gray-400 w-14 shrink-0">{f.faixa}</span>
-                  <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-5 rounded-full transition-all"
-                      style={{
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", color: "#999", marginBottom: 14 }}>DISTRIBUIÇÃO DE SCORES</p>
+            <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #ebebeb", padding: "20px 22px", display: "flex", flexDirection: "column", gap: 12 }}>
+              {data.distribuicao.map((f, i) => {
+                const opacity = [1, 0.8, 0.6, 0.45][i] ?? 0.4
+                return (
+                  <div key={f.faixa} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ fontSize: 11, color: "#aaa", width: 52, flexShrink: 0 }}>{f.faixa}</span>
+                    <div style={{ flex: 1, height: 20, background: "#f0f0f0", borderRadius: 999, overflow: "hidden" }}>
+                      <div style={{
+                        height: 20, borderRadius: 999,
                         width: `${(f.count / maxFaixa) * 100}%`,
-                        background: "#C9A84C",
-                        opacity: f.faixa === "80-100" ? 1 : f.faixa === "60-80" ? 0.8 : f.faixa === "40-60" ? 0.6 : 0.4,
-                      }}
-                    />
+                        background: C, opacity,
+                        transition: "width .4s",
+                      }} />
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#333", width: 28, textAlign: "right", flexShrink: 0 }}>{f.count}</span>
                   </div>
-                  <span className="text-sm font-semibold text-gray-700 w-8 text-right shrink-0">{f.count}</span>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </section>
 
           {/* 3. POR SETOR */}
-          {temSetores && <section>
-            <p className="text-xs font-semibold tracking-[0.15em] mb-4" style={{ color: "#9ca3af" }}>
-              POR SETOR
-            </p>
-            <div className="space-y-2">
-              {data.por_setor.slice(0, 8).map(s => (
-                <div key={s.setor} className="bg-white rounded-2xl px-5 py-4 shadow-sm border border-gray-100 flex items-center gap-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 text-sm truncate">{s.setor}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{s.count} ativos · destaque: {s.top_ticker}</p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p className="text-lg font-bold text-gray-900">{s.score_medio}</p>
-                    <div className="mt-1 h-1.5 rounded-full bg-gray-100 w-16">
-                      <div
-                        className="h-1.5 rounded-full"
-                        style={{ width: `${(s.score_medio / maxSetor) * 100}%`, background: "#C9A84C" }}
-                      />
+          {temSetores && (
+            <section>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", color: "#999", marginBottom: 14 }}>POR SETOR</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {data.por_setor.slice(0, 8).map(s => (
+                  <div key={s.setor} style={{
+                    background: "#fff", borderRadius: 16, border: "1px solid #ebebeb",
+                    padding: "14px 18px", display: "flex", alignItems: "center", gap: 16,
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 600, color: "#111", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.setor}</p>
+                      <p style={{ fontSize: 11, color: "#aaa", marginTop: 3 }}>{s.count} ativos · destaque: {s.top_ticker}</p>
+                    </div>
+                    <div style={{ flexShrink: 0, textAlign: "right" }}>
+                      <p style={{ fontSize: 18, fontWeight: 800, color: "#111", fontFamily: "var(--font-manrope), sans-serif" }}>{s.score_medio}</p>
+                      <div style={{ marginTop: 4, height: 4, background: "#f0f0f0", borderRadius: 99, width: 56 }}>
+                        <div style={{ height: 4, borderRadius: 99, background: C, width: `${(s.score_medio / maxSetor) * 100}%` }} />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </section>}
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* 4. DESTAQUES */}
           <section>
-            <p className="text-xs font-semibold tracking-[0.15em] mb-4" style={{ color: "#9ca3af" }}>
-              DESTAQUES
-            </p>
-            <div className="grid grid-cols-2 gap-4">
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", color: "#999", marginBottom: 14 }}>DESTAQUES</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
 
-              {/* Top momentum */}
-              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <p className="text-xs text-gray-400 mb-3 font-medium flex items-center gap-1">Top Momentum <Tooltip text={TOOLTIPS.momentum} position="bottom" /></p>
-                <div className="space-y-3">
+              <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #ebebeb", padding: 20 }}>
+                <p style={{ fontSize: 11, color: "#aaa", marginBottom: 14, fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
+                  Top Momentum <Tooltip text={TOOLTIPS.momentum} position="bottom" />
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {data.destaques.top_momentum.map(a => (
-                    <div key={a.ticker} className="flex items-center gap-3">
-                      <div
-                        className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0"
-                        style={{ background: "#0a0a0a", color: "#C9A84C" }}
-                      >
-                        {a.ticker.slice(0, 3)}
+                    <div key={a.ticker} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: DARK, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <span style={{ color: C, fontSize: 10, fontWeight: 800 }}>{a.ticker.slice(0, 3)}</span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 text-sm">{a.ticker}</p>
-                        <p className="text-xs text-gray-400">{a.sinal}</p>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontWeight: 700, color: "#111", fontSize: 12 }}>{a.ticker}</p>
+                        <p style={{ fontSize: 11, color: "#aaa" }}>{a.sinal}</p>
                       </div>
-                      <span className="text-sm font-bold text-gray-900 shrink-0">{Math.round(a.score)}</span>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: "#111", flexShrink: 0, fontFamily: "var(--font-manrope), sans-serif" }}>
+                        {Math.round(a.score)}
+                      </span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Top estrutural */}
-              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <p className="text-xs text-gray-400 mb-3 font-medium flex items-center gap-1">Top Estrutural <Tooltip text={TOOLTIPS.estrutural} position="bottom" /></p>
-                <div className="space-y-3">
+              <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #ebebeb", padding: 20 }}>
+                <p style={{ fontSize: 11, color: "#aaa", marginBottom: 14, fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
+                  Top Estrutural <Tooltip text={TOOLTIPS.estrutural} position="bottom" />
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {data.destaques.top_estrutural.map(a => (
-                    <div key={a.ticker} className="flex items-center gap-3">
-                      <div
-                        className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0"
-                        style={{ background: "#0a0a0a", color: "#C9A84C" }}
-                      >
-                        {a.ticker.slice(0, 3)}
+                    <div key={a.ticker} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: DARK, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <span style={{ color: C, fontSize: 10, fontWeight: 800 }}>{a.ticker.slice(0, 3)}</span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 text-sm">{a.ticker}</p>
-                        <p className="text-xs text-gray-400">{a.sinal}</p>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontWeight: 700, color: "#111", fontSize: 12 }}>{a.ticker}</p>
+                        <p style={{ fontSize: 11, color: "#aaa" }}>{a.sinal}</p>
                       </div>
-                      <span className="text-sm font-bold text-gray-900 shrink-0">{Math.round(a.score)}</span>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: "#111", flexShrink: 0, fontFamily: "var(--font-manrope), sans-serif" }}>
+                        {Math.round(a.score)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -276,8 +292,13 @@ export default function AnalisesPage() {
             </div>
           </section>
 
+          {/* Disclaimer */}
+          <p style={{ color: "#aaa", fontSize: 11, lineHeight: 1.6 }}>
+            Scores gerados por modelo quantitativo a partir de indicadores técnicos. Conteúdo informativo — não constitui recomendação de investimento.
+          </p>
+
         </div>
       )}
-    </main>
+    </div>
   )
 }
