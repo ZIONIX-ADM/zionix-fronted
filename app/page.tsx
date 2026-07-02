@@ -21,6 +21,8 @@ export default function Home() {
   const [mostrarGrafico, setMostrarGrafico] = useState(false)
   const [watchlist, setWatchlist] = useState<string[]>([])
   const [ranking, setRanking] = useState<any[]>([])
+  const [leituraIA, setLeituraIA] = useState<string>("")
+  const [leituraLoading, setLeituraLoading] = useState(false)
 
   const variacao = resultado?.variacao_percentual ?? 0
   const setor = resultado?.setor ?? ""
@@ -53,10 +55,44 @@ export default function Home() {
       const data = await res.json()
       setResultado(data)
       setMostrarGrafico(false)
+      setLeituraIA("")
+      // leitura IA disparada após resultado (score calculado no useEffect abaixo)
     } catch (err) {
       console.error("Erro ao buscar ativo:", err)
     }
   }
+
+  // dispara leitura IA toda vez que resultado muda (novo ativo buscado)
+  useEffect(() => {
+    if (!resultado || resultado.nao_elegivel) return
+    const diag = calcularScoreDiagnostico({
+      precos: resultado.grafico?.precos ?? [],
+      highs: resultado.grafico?.highs ?? [],
+      lows: resultado.grafico?.lows ?? [],
+      datas: resultado.grafico?.datas ?? [],
+      mercado: resultado.mercado ?? "neutro",
+      setor: resultado.setor ?? "",
+    })
+    const fallback = resultado.interpretacao_grafico || "Análise técnica processada pelo motor Zionix."
+
+    setLeituraLoading(true)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analise-ia/${resultado.ticker}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        score: diag.score,
+        decisao: diag.decisao,
+        sinal: gerarRecomendacao(diag.score),
+        mercado: resultado.mercado ?? "neutro",
+        setor: resultado.setor ?? "",
+        nome: resultado.nome ?? resultado.ticker,
+      }),
+    })
+      .then(r => r.json())
+      .then(d => setLeituraIA(d.texto || fallback))
+      .catch(() => setLeituraIA(fallback))
+      .finally(() => setLeituraLoading(false))
+  }, [resultado])
 
   useEffect(() => {
     const saved = localStorage.getItem("watchlist")
@@ -324,7 +360,10 @@ export default function Home() {
                 ))}
               </div>
 
-              <AIInterpretation texto={resultado.interpretacao_grafico} />
+              <AIInterpretation
+                texto={leituraIA || resultado.interpretacao_grafico || ""}
+                loading={leituraLoading}
+              />
             </>
           )}
         </div>
