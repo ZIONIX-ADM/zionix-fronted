@@ -6,6 +6,7 @@ import {
   calcularMACD,
   calcularADX,
   calcularStochastic,
+  calcularCCI,
   classificarContexto,
   trendEngine,
   pullbackEngine
@@ -106,11 +107,12 @@ export function calcularScoreDiagnostico({
     (precos[i] > mm50 ? 1 : 0)
   )
 
-  // MACD, ADX e Stochastic — componentes contínuos (Fase 2 / Fase 3)
+  // MACD, ADX, Stochastic e CCI — componentes contínuos
   const atr = calcularATR(dados, 14, i)
   const macdResult = calcularMACD(precos, i)
   const adxResult = calcularADX(dados, 14, i)
   const stochResult = calcularStochastic(dados, i)
+  const cciValue = calcularCCI(dados, i)
 
   // Normaliza histograma MACD pelo ATR (adimensional, independente de preço)
   const macdNorm = macdResult && atr > 0 ? macdResult.histogram / atr : 0
@@ -118,6 +120,8 @@ export function calcularScoreDiagnostico({
   const adxDirecaoBull = adxResult ? adxResult.plusDI >= adxResult.minusDI : true
   // Normaliza %K: (k - 50) / 50 → -1..+1; 0 quando não calculado
   const stochNorm = stochResult ? (stochResult.k - 50) / 50 : 0
+  // Normaliza CCI: clamp(cci/200, -1, +1); 0 quando não calculado
+  const cciNorm = cciValue !== null ? Math.max(-1, Math.min(1, cciValue / 200)) : 0
 
   return gerarDiagnosticoDiario({
     contexto,
@@ -135,6 +139,7 @@ export function calcularScoreDiagnostico({
     adxValue,
     adxDirecaoBull,
     stochNorm,
+    cciNorm,
   })
 }
 

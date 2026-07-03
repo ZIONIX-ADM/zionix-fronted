@@ -21,6 +21,7 @@ export function gerarDiagnosticoDiario({
   adxValue = 15,
   adxDirecaoBull = true,
   stochNorm = 0,
+  cciNorm = 0,
 }: {
   contexto: string
   setup: { tipo: string }
@@ -41,6 +42,8 @@ export function gerarDiagnosticoDiario({
   adxDirecaoBull?: boolean
   /** Stochastic %K suavizado (14,3,3) normalizado: (k-50)/50 → -1..+1. 0 = neutro. */
   stochNorm?: number
+  /** CCI(20) normalizado: clamp(cci/200, -1, +1). 0 = neutro. */
+  cciNorm?: number
 }): { score: number; decisao: Decisao } {
   let score = 30
 
@@ -95,6 +98,10 @@ export function gerarDiagnosticoDiario({
   // stochNorm = (k - 50) / 50 → -1..+1. Mapeado para -6..+6 pts.
   // Região oversold (k<20, norm<-0.6) confirma momentum fraco; overbought (k>80, norm>0.6) confirma força.
   score += Math.max(-6, Math.min(6, stochNorm * 6))
+
+  // CCI(20): desvio do preço típico em relação à sua média. Captura impulsos de curto/médio prazo.
+  // cciNorm = clamp(cci/200, -1, +1). Mapeado para -6..+6 pts.
+  score += Math.max(-6, Math.min(6, cciNorm * 6))
 
   // Correção 2: penalidade gradual por condições de entrada não atendidas.
   // Substitui o hard cap em 67 — escala suave sem corte abrupto.

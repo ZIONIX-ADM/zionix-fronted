@@ -287,6 +287,37 @@ export function calcularStochastic(
   return { k, d }
 }
 
+/**
+ * CCI — Commodity Channel Index (20 períodos).
+ * CCI = (TP - SMA20_TP) / (0.015 * MeanDeviation)
+ * TP = (high + low + close) / 3.
+ * Retorna valor adimensional; range típico -200..+200, sem limites teóricos.
+ * Normalizar para score: cciNorm = clamp(cci / 200, -1, +1).
+ */
+export function calcularCCI(
+  dados: Candle[],
+  index: number,
+  periodo = 20
+): number | null {
+  if (index < periodo - 1) return null
+
+  const tps: number[] = []
+  for (let i = index - periodo + 1; i <= index; i++) {
+    const c = dados[i]
+    if (!c) return null
+    const h = c.high ?? c.preco
+    const l = c.low ?? c.preco
+    const cl = c.close ?? c.preco
+    tps.push((h + l + cl) / 3)
+  }
+
+  const sma = tps.reduce((a, b) => a + b, 0) / periodo
+  const meanDev = tps.reduce((a, b) => a + Math.abs(b - sma), 0) / periodo
+
+  if (meanDev === 0) return 0
+  return (tps[tps.length - 1] - sma) / (0.015 * meanDev)
+}
+
 export function pullbackEngine(
   precos: number[],
   dados: Candle[],
