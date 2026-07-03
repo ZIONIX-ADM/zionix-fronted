@@ -228,6 +228,65 @@ export function calcularADX(
   return { adx, plusDI: pdi, minusDI: mdi }
 }
 
+/**
+ * Stochastic Oscillator (%K suavizado, %D) com parâmetros (14, 3, 3).
+ * Retorna {k, d} — ambos em 0-100.
+ * k: SMA(3) do %K bruto (14 períodos). d: SMA(3) de k.
+ * Normalizar para score: stochNorm = (k - 50) / 50 → range -1..+1.
+ */
+export function calcularStochastic(
+  dados: Candle[],
+  index: number,
+  periodoK = 14,
+  smoothK = 3,
+  smoothD = 3
+): { k: number; d: number } | null {
+  // precisa de periodoK + smoothK + smoothD - 2 candles
+  const minIndex = periodoK + smoothK + smoothD - 3
+  if (index < minIndex) return null
+
+  // raw %K para os últimos smoothK + smoothD - 1 candles (para suavizar)
+  const rawKLen = smoothK + smoothD - 1
+  const rawK: number[] = []
+
+  for (let j = index - rawKLen + 1; j <= index; j++) {
+    let lowest = Infinity
+    let highest = -Infinity
+    for (let k = j - periodoK + 1; k <= j; k++) {
+      const c = dados[k]
+      if (!c) return null
+      const h = c.high ?? c.preco
+      const l = c.low ?? c.preco
+      if (h > highest) highest = h
+      if (l < lowest) lowest = l
+    }
+    if (highest === lowest) {
+      rawK.push(50)
+    } else {
+      const close = dados[j].close ?? dados[j].preco
+      rawK.push(((close - lowest) / (highest - lowest)) * 100)
+    }
+  }
+
+  // SMA(smoothK) da série rawK → série kSeries
+  const kSeries: number[] = []
+  for (let j = smoothK - 1; j < rawK.length; j++) {
+    let sum = 0
+    for (let k = j - smoothK + 1; k <= j; k++) sum += rawK[k]
+    kSeries.push(sum / smoothK)
+  }
+
+  if (kSeries.length < smoothD) return null
+
+  // SMA(smoothD) de kSeries → %D
+  let dSum = 0
+  for (let j = kSeries.length - smoothD; j < kSeries.length; j++) dSum += kSeries[j]
+  const d = dSum / smoothD
+  const k = kSeries[kSeries.length - 1]
+
+  return { k, d }
+}
+
 export function pullbackEngine(
   precos: number[],
   dados: Candle[],

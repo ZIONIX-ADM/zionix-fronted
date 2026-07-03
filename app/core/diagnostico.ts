@@ -20,6 +20,7 @@ export function gerarDiagnosticoDiario({
   macdNorm = 0,
   adxValue = 15,
   adxDirecaoBull = true,
+  stochNorm = 0,
 }: {
   contexto: string
   setup: { tipo: string }
@@ -38,6 +39,8 @@ export function gerarDiagnosticoDiario({
   adxValue?: number
   /** true se +DI > -DI (tendência de alta). Inverte contribuição ADX se falso. */
   adxDirecaoBull?: boolean
+  /** Stochastic %K suavizado (14,3,3) normalizado: (k-50)/50 → -1..+1. 0 = neutro. */
+  stochNorm?: number
 }): { score: number; decisao: Decisao } {
   let score = 30
 
@@ -87,6 +90,11 @@ export function gerarDiagnosticoDiario({
   // é baixista (+DI < -DI) — ativo com força bearish não deve ganhar bônus de ADX.
   const adxBase = Math.max(0, Math.min(12, (adxValue - 15) / 2.5))
   score += adxDirecaoBull ? adxBase : -adxBase * 0.5
+
+  // Stochastic %K (14,3,3): momentum de curto prazo.
+  // stochNorm = (k - 50) / 50 → -1..+1. Mapeado para -6..+6 pts.
+  // Região oversold (k<20, norm<-0.6) confirma momentum fraco; overbought (k>80, norm>0.6) confirma força.
+  score += Math.max(-6, Math.min(6, stochNorm * 6))
 
   // Correção 2: penalidade gradual por condições de entrada não atendidas.
   // Substitui o hard cap em 67 — escala suave sem corte abrupto.
