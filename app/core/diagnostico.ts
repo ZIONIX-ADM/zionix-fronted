@@ -117,12 +117,19 @@ export function gerarDiagnosticoDiario({
 
   score = Math.max(0, Math.min(100, score))
 
+  // Thresholds dinâmicos por regime. Gaps fixos: comprar-manter=16, manter-aguardar=10, aguardar-cautela=12.
+  // Calibrados para o motor com MACD+ADX+Stoch+CCI, que comprime scores ~25 pts vs motor legado.
+  const tManter  = mercado === "bull" ? 55 : mercado === "bear" ? 40 : 46
+  const tComprar = tManter + 16
+  const tAguardar = tManter - 10
+  const tCautela  = tAguardar - 12
+
   let decisao: Decisao = "aguardar"
-  if (score >= 68) decisao = "comprar"
-  else if (score >= 52) decisao = "manter"
-  else if (score >= 42) decisao = "aguardar"
-  else if (score >= 30) decisao = "cautela"
-  else decisao = "evitar"
+  if (score >= tComprar)       decisao = "comprar"
+  else if (score >= tManter)   decisao = "manter"
+  else if (score >= tAguardar) decisao = "aguardar"
+  else if (score >= tCautela)  decisao = "cautela"
+  else                         decisao = "evitar"
 
   return { score, decisao }
 }
