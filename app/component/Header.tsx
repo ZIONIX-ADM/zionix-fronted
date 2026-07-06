@@ -2,17 +2,57 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
 
-const TICKER_STRIP = [
-  { label: "IBOV", value: "136.240", var: "+0,84%", up: true },
-  { label: "DÓLAR", value: "5,74", var: "-0,12%", up: false },
-  { label: "S&P 500", value: "5.953", var: "+0,31%", up: true },
-  { label: "BTC", value: "107.320", var: "+1,20%", up: true },
-  { label: "SELIC", value: "13,75%", var: "a.a.", up: null },
-]
+type IndiceItem = { valor: number; variacao_pct: number | null; variacao_abs: number | null } | null
+
+type Indices = {
+  ibov:  IndiceItem
+  dolar: IndiceItem
+  sp500: IndiceItem
+  btc:   IndiceItem
+  selic: IndiceItem
+}
+
+function fmt(valor: number, tipo: string): string {
+  if (tipo === "ibov")  return Math.round(valor).toLocaleString("pt-BR")
+  if (tipo === "dolar") return valor.toFixed(2).replace(".", ",")
+  if (tipo === "sp500") return Math.round(valor).toLocaleString("pt-BR")
+  if (tipo === "btc")   return Math.round(valor).toLocaleString("pt-BR")
+  if (tipo === "selic") return valor.toFixed(2).replace(".", ",") + "%"
+  return String(valor)
+}
+
+function fmtPct(pct: number): string {
+  const sinal = pct >= 0 ? "+" : ""
+  return `${sinal}${pct.toFixed(2).replace(".", ",")}%`
+}
+
+const PREFIXOS: Record<string, string> = { dolar: "R$ ", btc: "U$ " }
 
 export default function Header() {
   const pathname = usePathname()
+  const [indices, setIndices] = useState<Indices | null>(null)
+
+  useEffect(() => {
+    async function fetchIndices() {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mercado/indices`)
+        if (res.ok) setIndices(await res.json())
+      } catch {}
+    }
+    fetchIndices()
+    const id = setInterval(fetchIndices, 5 * 60 * 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  const items = [
+    { key: "ibov",  label: "IBOV" },
+    { key: "dolar", label: "DÓLAR" },
+    { key: "sp500", label: "S&P 500" },
+    { key: "btc",   label: "BTC" },
+    { key: "selic", label: "SELIC" },
+  ] as const
 
   return (
     <div style={{ background: "#0a0a0a" }}>
@@ -27,17 +67,23 @@ export default function Header() {
         }}
       >
         <div className="flex items-center">
-          {TICKER_STRIP.map((t, i) => (
-            <div key={t.label} className="flex items-center gap-2 px-5" style={{ borderRight: i < TICKER_STRIP.length - 1 ? "1px solid rgba(255,255,255,.08)" : "none" }}>
-              <span className="text-[11px] font-medium" style={{ color: "#8a8a8a" }}>{t.label}</span>
-              <span className="text-[11px] font-semibold" style={{ color: "#e8e8e8" }}>{t.value}</span>
-              {t.up !== null ? (
-                <span className="text-[10px] font-medium" style={{ color: t.up ? "#3fb378" : "#e0655a" }}>{t.var}</span>
-              ) : (
-                <span className="text-[10px]" style={{ color: "#6b6b6b" }}>{t.var}</span>
-              )}
-            </div>
-          ))}
+          {items.map(({ key, label }, i) => {
+            const dado = indices?.[key] ?? null
+            const valor = dado ? `${PREFIXOS[key] ?? ""}${fmt(dado.valor, key)}` : "—"
+            const pct   = dado?.variacao_pct
+            const up    = pct == null ? null : pct >= 0
+            return (
+              <div key={key} className="flex items-center gap-2 px-5" style={{ borderRight: i < items.length - 1 ? "1px solid rgba(255,255,255,.08)" : "none" }}>
+                <span className="text-[11px] font-medium" style={{ color: "#8a8a8a" }}>{label}</span>
+                <span className="text-[11px] font-semibold" style={{ color: "#e8e8e8" }}>{valor}</span>
+                {key === "selic" ? (
+                  <span className="text-[10px]" style={{ color: "#6b6b6b" }}>a.a.</span>
+                ) : up !== null ? (
+                  <span className="text-[10px] font-medium" style={{ color: up ? "#3fb378" : "#e0655a" }}>{fmtPct(pct!)}</span>
+                ) : null}
+              </div>
+            )
+          })}
         </div>
       </div>
 
