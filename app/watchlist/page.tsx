@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { calcularScoreDiagnostico, gerarCenario, gerarRecomendacao } from "../core/score"
+import { gerarCenario } from "../core/score"
 import Tooltip from "../component/Tooltip"
 import { TOOLTIPS } from "../component/tooltips"
 export default function Watchlist() {
@@ -21,23 +21,16 @@ export default function Watchlist() {
 
         const ativosComDados = await Promise.all(
           saved.map(async (ticker: string) => {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/buscar/${ticker}`)
-            const data = await res.json()
+            const [buscarRes, scoreRes] = await Promise.all([
+              fetch(`${process.env.NEXT_PUBLIC_API_URL}/buscar/${ticker}`),
+              fetch(`${process.env.NEXT_PUBLIC_API_URL}/score/${ticker}`),
+            ])
+            const data = await buscarRes.json()
+            const scoreData = await scoreRes.json()
 
-            const setor = data.setor ?? ""
             const variacao = data.variacao_percentual ?? 0
-
-            const diagnostico = calcularScoreDiagnostico({
-              precos: data.grafico?.precos ?? [],
-              highs: data.grafico?.highs ?? [],
-              lows: data.grafico?.lows ?? [],
-              datas: data.grafico?.datas ?? [],
-              mercado: data.mercado ?? "neutro",
-              setor
-            })
-
-            const score = diagnostico.score
-            const sinal = gerarRecomendacao(score)
+            const score = scoreData.score ?? data.score ?? 0
+            const sinal = scoreData.sinal ?? data.sinal ?? "—"
             const cenario = gerarCenario(variacao)
 
             return {

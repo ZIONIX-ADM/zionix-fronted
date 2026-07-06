@@ -59,9 +59,19 @@ export default function Home() {
   async function buscar() {
     if (!ticker) return
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/buscar/${ticker}`)
-      if (!res.ok) throw new Error(`Erro: ${res.status}`)
-      const data = await res.json()
+      const [buscarRes, scoreRes] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/buscar/${ticker}`),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/score/${ticker}`),
+      ])
+      if (!buscarRes.ok) throw new Error(`Erro: ${buscarRes.status}`)
+      const data = await buscarRes.json()
+      const scoreData = scoreRes.ok ? await scoreRes.json() : {}
+      // Sobrescreve score/decisao/sinal com dados do banco (batch suavizado)
+      if (scoreData.score != null) {
+        data.score = scoreData.score
+        data.decisao = scoreData.decisao
+        data.sinal = scoreData.sinal
+      }
       setResultado(data)
       setMostrarGrafico(false)
       setLeituraIA("")
