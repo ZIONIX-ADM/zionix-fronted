@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { gerarCenario } from "../core/score"
 import Tooltip from "../component/Tooltip"
 import { TOOLTIPS } from "../component/tooltips"
 export default function Watchlist() {
@@ -29,16 +28,13 @@ export default function Watchlist() {
             const data = await buscarRes.json()
             const scoreData = await scoreRes.json()
 
-            const variacao = data.variacao_percentual ?? 0
             const score = scoreData.score ?? data.score ?? 0
             const sinal = scoreData.sinal ?? data.sinal ?? "—"
-            const cenario = gerarCenario(variacao)
 
             return {
               ...data,
               score,
               sinal,
-              cenario
             }
           })
         )
