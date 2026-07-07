@@ -80,11 +80,14 @@ export default function Header() {
   async function signIn() {
     try {
       const sb = createClient()
-      await sb.auth.signInWithOAuth({
+      const { data, error } = await sb.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo: `${window.location.origin}/auth/callback` },
       })
-    } catch {}
+      console.log('[signIn] data:', data, 'error:', error)
+    } catch (e) {
+      console.log('[signIn] exception:', e)
+    }
   }
 
   async function signOut() {
