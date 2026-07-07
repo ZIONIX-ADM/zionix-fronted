@@ -512,12 +512,6 @@ export default function Home() {
                 )}
               </div>
 
-              {/* CENÁRIO */}
-              <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #ebebeb", padding: "18px 22px" }}>
-                <p style={{ fontSize: 10, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: 6 }}>Cenário</p>
-                <p style={{ fontSize: 18, fontWeight: 700, color: "#111", fontFamily: "var(--font-manrope), sans-serif" }}>{cenario}</p>
-              </div>
-
               {/* GRID 2x2 */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 {[
