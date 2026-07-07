@@ -39,7 +39,6 @@ export default function Header() {
   const [user, setUser] = useState<User | null>(null)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const supabase = createClient()
 
   useEffect(() => {
     async function fetchIndices() {
@@ -54,12 +53,11 @@ export default function Header() {
   }, [])
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data, error }) => {
-      console.log("[Header] getUser →", { user: data.user?.email ?? null, error: error?.message ?? null })
-      setUser(data.user)
-    })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("[Header] authStateChange →", event, session?.user?.email ?? null)
+    let sb: ReturnType<typeof createClient>
+    try { sb = createClient() } catch { return }
+
+    sb.auth.getUser().then(({ data }) => setUser(data.user))
+    const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
     })
     return () => subscription.unsubscribe()
@@ -76,14 +74,20 @@ export default function Header() {
   }, [])
 
   async function signIn() {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    })
+    try {
+      const sb = createClient()
+      await sb.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      })
+    } catch {}
   }
 
   async function signOut() {
-    await supabase.auth.signOut()
+    try {
+      const sb = createClient()
+      await sb.auth.signOut()
+    } catch {}
     setDropdownOpen(false)
     router.push("/")
   }
