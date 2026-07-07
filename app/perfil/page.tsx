@@ -3,12 +3,16 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "../../lib/supabase"
+import { mapearDecisao } from "../lib/decisao"
 import type { User } from "@supabase/supabase-js"
+
+type ScoreData = { score: number; decisao: string; sinal: string } | null
 
 export default function Perfil() {
   const router = useRouter()
   const [user, setUser] = useState<User | null | undefined>(undefined)
   const [favoritos, setFavoritos] = useState<string[]>([])
+  const [scores, setScores] = useState<Record<string, ScoreData>>({})
 
   useEffect(() => {
     let supabase: ReturnType<typeof createClient>
@@ -18,7 +22,19 @@ export default function Perfil() {
         router.replace("/")
       } else {
         setUser(data.user)
-        import("../../lib/favoritos").then(m => m.getFavoritos()).then(setFavoritos)
+        import("../../lib/favoritos").then(m => m.getFavoritos()).then(tickers => {
+          setFavoritos(tickers)
+          Promise.all(
+            tickers.map(t =>
+              fetch(`${process.env.NEXT_PUBLIC_API_URL}/score/${t}`)
+                .then(r => r.ok ? r.json() : null)
+                .catch(() => null)
+                .then(d => [t, d] as [string, ScoreData])
+            )
+          ).then(results => {
+            setScores(Object.fromEntries(results))
+          })
+        })
       }
     })
   }, [])
@@ -86,16 +102,48 @@ export default function Perfil() {
           {favoritos.length === 0 ? (
             <p style={{ color: "#aaa", fontSize: 14 }}>Nenhum ativo salvo ainda.</p>
           ) : (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-              {favoritos.map((ticker) => (
-                <span key={ticker} style={{
-                  background: `${C}15`, color: C,
-                  border: `1px solid ${C}44`, borderRadius: 8,
-                  padding: "6px 14px", fontSize: 13, fontWeight: 600,
-                }}>
-                  {ticker.replace(/\.SA$/i, "")}
-                </span>
-              ))}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {favoritos.map((ticker) => {
+                const d = scores[ticker]
+                const nivel = d ? mapearDecisao(d.decisao) : null
+                return (
+                  <div key={ticker} style={{
+                    display: "flex", alignItems: "center", gap: 14,
+                    background: "#fafafa", borderRadius: 12,
+                    border: "1px solid #ebebeb", padding: "12px 16px",
+                  }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+                      background: "#0a0a0a", display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <span style={{ color: C, fontSize: 10, fontWeight: 800 }}>
+                        {ticker.replace(/\.SA$/i, "").slice(0, 3)}
+                      </span>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontWeight: 700, color: "#111", fontSize: 14, margin: 0 }}>
+                        {ticker.replace(/\.SA$/i, "")}
+                      </p>
+                    </div>
+                    {d ? (
+                      <>
+                        <span style={{ fontSize: 16, fontWeight: 800, color: "#111", fontFamily: "var(--font-manrope), sans-serif" }}>
+                          {Math.round(d.score)}
+                        </span>
+                        <span style={{
+                          fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 999,
+                          background: nivel!.bg, color: nivel!.color, border: `1px solid ${nivel!.border}`,
+                          flexShrink: 0,
+                        }}>
+                          {nivel!.label}
+                        </span>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: 12, color: "#ccc" }}>—</span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
