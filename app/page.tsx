@@ -382,7 +382,7 @@ export default function Home() {
           </button>
 
           {/* Barra de busca (contexto de resultado) */}
-          <div style={{ display: "flex", gap: 10, marginBottom: 28, maxWidth: 480 }}>
+          <div style={{ display: "flex", gap: 10, marginBottom: 28, maxWidth: 480, margin: "0 auto 28px" }}>
             <div style={{
               flex: 1, display: "flex", alignItems: "center", gap: 10,
               background: "#fff", border: "1px solid #e5e7eb",
