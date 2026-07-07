@@ -8,6 +8,7 @@ import type { User } from "@supabase/supabase-js"
 export default function Perfil() {
   const router = useRouter()
   const [user, setUser] = useState<User | null | undefined>(undefined)
+  const [favoritos, setFavoritos] = useState<string[]>([])
   const supabase = createClient()
 
   useEffect(() => {
@@ -16,6 +17,7 @@ export default function Perfil() {
         router.replace("/")
       } else {
         setUser(data.user)
+        import("../../lib/favoritos").then(m => m.getFavoritos()).then(setFavoritos)
       }
     })
   }, [])
@@ -28,10 +30,6 @@ export default function Perfil() {
   const avatarUrl = user.user_metadata?.avatar_url as string | undefined
   const nome = (user.user_metadata?.full_name ?? user.email ?? "") as string
   const iniciais = nome.trim().split(" ").slice(0, 2).map((p: string) => p[0]).join("").toUpperCase() || "?"
-
-  const watchlist: string[] = typeof window !== "undefined"
-    ? JSON.parse(localStorage.getItem("watchlist") || "[]")
-    : []
 
   async function signOut() {
     await supabase.auth.signOut()
@@ -84,17 +82,17 @@ export default function Perfil() {
           <h2 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px", color: "#111" }}>
             Ativos favoritos
           </h2>
-          {watchlist.length === 0 ? (
+          {favoritos.length === 0 ? (
             <p style={{ color: "#aaa", fontSize: 14 }}>Nenhum ativo salvo ainda.</p>
           ) : (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-              {watchlist.map((ticker) => (
+              {favoritos.map((ticker) => (
                 <span key={ticker} style={{
                   background: `${C}15`, color: C,
                   border: `1px solid ${C}44`, borderRadius: 8,
                   padding: "6px 14px", fontSize: 13, fontWeight: 600,
                 }}>
-                  {ticker}
+                  {ticker.replace(/\.SA$/i, "")}
                 </span>
               ))}
             </div>

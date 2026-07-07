@@ -105,8 +105,7 @@ export default function Home() {
   }, [resultado])
 
   useEffect(() => {
-    const saved = localStorage.getItem("watchlist")
-    if (saved) setWatchlist(JSON.parse(saved))
+    import("../lib/favoritos").then(m => m.getFavoritos()).then(setWatchlist)
   }, [])
 
   useEffect(() => {
@@ -128,10 +127,9 @@ export default function Home() {
     carregarRanking()
   }, [])
 
-  function toggleWatchlist(t: string) {
-    const saved = JSON.parse(localStorage.getItem("watchlist") || "[]")
-    const updated = saved.includes(t) ? saved.filter((x: string) => x !== t) : [...saved, t]
-    localStorage.setItem("watchlist", JSON.stringify(updated))
+  async function toggleWatchlist(t: string) {
+    const { toggleFavorito } = await import("../lib/favoritos")
+    const updated = await toggleFavorito(t, watchlist)
     setWatchlist(updated)
   }
 

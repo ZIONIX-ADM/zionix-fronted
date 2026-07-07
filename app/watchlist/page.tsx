@@ -11,7 +11,8 @@ export default function Watchlist() {
   useEffect(() => {
     async function carregarWatchlist() {
       try {
-        const saved = JSON.parse(localStorage.getItem("watchlist") || "[]")
+        const { getFavoritos } = await import("../../lib/favoritos")
+        const saved = await getFavoritos()
 
         if (saved.length === 0) {
           setAtivos([])
@@ -100,7 +101,7 @@ export default function Watchlist() {
               {/* HEADER CARD */}
               <div className="flex justify-between items-start">
                 <div>
-                  <h2 className="font-semibold text-lg">{ativo.ticker}</h2>
+                  <h2 className="font-semibold text-lg">{(ativo.ticker ?? "").replace(/\.SA$/i, "")}</h2>
                   <p className="text-sm text-gray-500">{ativo.nome}</p>
                 </div>
 
