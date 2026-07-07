@@ -37,6 +37,7 @@ export default function Header() {
   const router = useRouter()
   const [indices, setIndices] = useState<Indices | null>(null)
   const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -54,9 +55,12 @@ export default function Header() {
 
   useEffect(() => {
     let sb: ReturnType<typeof createClient>
-    try { sb = createClient() } catch { return }
+    try { sb = createClient() } catch { setLoading(false); return }
 
-    sb.auth.getUser().then(({ data }) => setUser(data.user))
+    sb.auth.getUser().then(({ data }) => {
+      setUser(data.user)
+      setLoading(false)
+    })
     const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
     })
@@ -199,7 +203,9 @@ export default function Header() {
           })}
 
           {/* Auth */}
-          {!user ? (
+          {loading ? (
+            <div style={{ width: 34, height: 34 }} />
+          ) : !user ? (
             <button
               onClick={signIn}
               style={{

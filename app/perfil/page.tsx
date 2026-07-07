@@ -9,9 +9,10 @@ export default function Perfil() {
   const router = useRouter()
   const [user, setUser] = useState<User | null | undefined>(undefined)
   const [favoritos, setFavoritos] = useState<string[]>([])
-  const supabase = createClient()
 
   useEffect(() => {
+    let supabase: ReturnType<typeof createClient>
+    try { supabase = createClient() } catch { router.replace("/"); return }
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) {
         router.replace("/")
@@ -32,7 +33,7 @@ export default function Perfil() {
   const iniciais = nome.trim().split(" ").slice(0, 2).map((p: string) => p[0]).join("").toUpperCase() || "?"
 
   async function signOut() {
-    await supabase.auth.signOut()
+    try { await createClient().auth.signOut() } catch {}
     router.push("/")
   }
 
