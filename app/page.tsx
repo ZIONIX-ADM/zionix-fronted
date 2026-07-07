@@ -181,7 +181,7 @@ export default function Home() {
             }}>
               <span className="pulse-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: C, display: "inline-block" }} />
               <span style={{ color: C, fontSize: 11, fontWeight: 700, letterSpacing: "0.16em" }}>
-                394 ATIVOS ANALISADOS HOJE
+                {rankingCompleto.length || "—"} ATIVOS ANALISADOS HOJE
               </span>
             </div>
 
@@ -196,7 +196,7 @@ export default function Home() {
             </h1>
 
             <p style={{ color: "#8a8a8a", fontSize: 16, textAlign: "center", maxWidth: 480, marginBottom: 40, lineHeight: 1.6 }}>
-              Motor de análise técnica com 394 ativos ranqueados por score diário.
+              Motor de análise técnica com {rankingCompleto.length || "—"} ativos ranqueados por score diário.
             </p>
 
             {/* Barra de busca */}
