@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import Tooltip from "../component/Tooltip"
 import { TOOLTIPS } from "../component/tooltips"
 
-type AtivoCard = { ticker: string; nome?: string; score: number; sinal: string }
+type AtivoCard = { ticker: string; nome?: string; score: number; sinal: string; decisao: string }
 
 type Analises = {
   mercado: string
@@ -16,7 +16,6 @@ type Analises = {
     top_momentum: { ticker: string; score: number; contexto: string; sinal: string }[]
     top_estrutural: { ticker: string; score: number; contexto: string; sinal: string }[]
   }
-  ativos_por_decisao: Record<string, AtivoCard[]>
 }
 
 const DECISAO_LABEL: Record<string, string> = {
@@ -41,31 +40,38 @@ const MERCADO_INFO: Record<string, { label: string; cor: string; desc: string }>
 const C = "#C9A84C"
 const DARK = "#0a0a0a"
 const MW = { maxWidth: 780, margin: "0 auto", padding: "0 24px" }
+const DECISOES = ["comprar", "manter", "aguardar", "cautela", "evitar"]
 
 export default function AnalisesPage() {
   const [data, setData] = useState<Analises | null>(null)
+  const [ativos, setAtivos] = useState<AtivoCard[]>([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/analises`)
-      .then(r => r.json())
-      .then(d => {
-        if (d && !d.erro && d.distribuicao) {
-          const dedup = (arr: AtivoCard[]) => Array.from(
-            new Map(arr.map(a => [a.ticker.replace(/\.SA$/i, ""), a])).values()
-          )
-          if (d.ativos_por_decisao) {
-            for (const k of Object.keys(d.ativos_por_decisao)) {
-              d.ativos_por_decisao[k] = dedup(d.ativos_por_decisao[k])
-            }
-          }
-          setData(d)
-        }
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
+    const dedup = (arr: AtivoCard[]) => Array.from(
+      new Map(arr.map(a => [a.ticker.replace(/\.SA$/i, ""), a])).values()
+    )
+
+    Promise.all([
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/analises`).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/ranking?limite=500`).then(r => r.json()),
+    ]).then(([analises, ranking]) => {
+      if (analises && !analises.erro && analises.distribuicao) setData(analises)
+      const lista: AtivoCard[] = ranking?.ativos ?? (Array.isArray(ranking) ? ranking : [])
+      setAtivos(dedup(lista))
+      setLoading(false)
+    }).catch(() => setLoading(false))
   }, [])
+
+  const ativosFiltrados = filtro
+    ? ativos.filter(a => a.decisao === filtro)
+    : []
+
+  const counts = DECISOES.reduce<Record<string, number>>((acc, d) => {
+    acc[d] = ativos.filter(a => a.decisao === d).length
+    return acc
+  }, {})
 
   const mercadoInfo = data ? (MERCADO_INFO[data.mercado] ?? MERCADO_INFO.neutro) : null
   const maxFaixa = data ? Math.max(...data.distribuicao.map(f => f.count)) : 1
@@ -93,7 +99,7 @@ export default function AnalisesPage() {
             Panorama completo da B3
           </h1>
           <p style={{ color: "#6b7280", fontSize: 14, maxWidth: 380 }}>
-            Agregações em tempo real de {data?.total_ativos ?? "—"} ativos analisados.
+            Agregações em tempo real de {ativos.length || (data?.total_ativos ?? "—")} ativos analisados.
           </p>
         </div>
       </section>
@@ -104,7 +110,7 @@ export default function AnalisesPage() {
         </div>
       )}
 
-      {!loading && data && (
+      {!loading && (data || ativos.length > 0) && (
         <div style={{ ...MW, paddingTop: 40, paddingBottom: 80, display: "flex", flexDirection: "column", gap: 36 }}>
 
           {/* 1. PULSO DO MERCADO */}
@@ -112,27 +118,29 @@ export default function AnalisesPage() {
             <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", color: "#999", marginBottom: 14 }}>PULSO DO MERCADO</p>
 
             {/* Regime card */}
+            {mercadoInfo && data && (
             <div style={{
               background: "#fff", borderRadius: 20, border: "1px solid #ebebeb",
               padding: "18px 22px", display: "flex", alignItems: "center", gap: 16, marginBottom: 14,
             }}>
               <div style={{
                 width: 48, height: 48, borderRadius: 14, flexShrink: 0,
-                background: mercadoInfo!.cor + "18",
+                background: mercadoInfo.cor + "18",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 22, fontWeight: 700, color: mercadoInfo!.cor,
+                fontSize: 22, fontWeight: 700, color: mercadoInfo.cor,
               }}>
                 {data.mercado === "bull" ? "↑" : data.mercado === "bear" ? "↓" : "→"}
               </div>
               <div>
                 <p style={{ fontWeight: 600, color: "#111", display: "flex", alignItems: "center", gap: 6 }}>
                   Mercado em{" "}
-                  <span style={{ color: mercadoInfo!.cor }}>{mercadoInfo!.label}</span>
+                  <span style={{ color: mercadoInfo.cor }}>{mercadoInfo.label}</span>
                   <Tooltip text={TOOLTIPS.regimeMercado} position="bottom" />
                 </p>
-                <p style={{ fontSize: 12, color: "#aaa", marginTop: 3 }}>{mercadoInfo!.desc}</p>
+                <p style={{ fontSize: 12, color: "#aaa", marginTop: 3 }}>{mercadoInfo.desc}</p>
               </div>
             </div>
+            )}
 
             {/* Filtros por decisão */}
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -146,11 +154,11 @@ export default function AnalisesPage() {
                   borderColor: filtro === null ? DARK : "#ddd",
                 }}
               >
-                Todos ({data.total_ativos})
+                Todos ({ativos.length || (data?.total_ativos ?? "—")})
               </button>
-              {["comprar", "manter", "aguardar", "cautela", "evitar"].map(d => {
+              {DECISOES.map(d => {
                 const c = DECISAO_COLOR[d]
-                const count = data.por_decisao[d] ?? 0
+                const count = counts[d] ?? 0
                 const ativo = filtro === d
                 return (
                   <button
@@ -173,7 +181,7 @@ export default function AnalisesPage() {
             {/* Lista filtrada */}
             {filtro && (
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
-                {(data.ativos_por_decisao[filtro] ?? []).map(a => {
+                {ativosFiltrados.map(a => {
                   const c = DECISAO_COLOR[filtro]
                   return (
                     <div key={a.ticker} style={{
@@ -204,7 +212,7 @@ export default function AnalisesPage() {
           </section>
 
           {/* 2. DISTRIBUIÇÃO DE SCORES */}
-          <section>
+          {data && <section>
             <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", color: "#999", marginBottom: 14 }}>DISTRIBUIÇÃO DE SCORES</p>
             <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #ebebeb", padding: "20px 22px", display: "flex", flexDirection: "column", gap: 12 }}>
               {data.distribuicao.map((f, i) => {
@@ -225,10 +233,10 @@ export default function AnalisesPage() {
                 )
               })}
             </div>
-          </section>
+          </section>}
 
           {/* 3. POR SETOR */}
-          {temSetores && (
+          {data && temSetores && (
             <section>
               <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", color: "#999", marginBottom: 14 }}>POR SETOR</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -254,7 +262,7 @@ export default function AnalisesPage() {
           )}
 
           {/* 4. DESTAQUES */}
-          <section>
+          {data && <section>
             <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", color: "#999", marginBottom: 14 }}>DESTAQUES</p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
 
@@ -303,7 +311,7 @@ export default function AnalisesPage() {
               </div>
 
             </div>
-          </section>
+          </section>}
 
           {/* Disclaimer */}
           <p style={{ color: "#aaa", fontSize: 11, lineHeight: 1.6 }}>
