@@ -115,13 +115,18 @@ export default function Home() {
         await fetch(`${process.env.NEXT_PUBLIC_API_URL}/health`).catch(() => {})
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ranking?limite=500`)
         const data = await res.json()
+        const deduplicar = (arr: any[]) => Array.from(
+          new Map(arr.map(a => [a.ticker.replace(/\.SA$/i, ""), a])).values()
+        )
         if (data.ativos) {
-          setRankingCompleto(data.ativos)
-          setRanking(data.ativos.slice(0, 20))
+          const deduplicado = deduplicar(data.ativos)
+          setRankingCompleto(deduplicado)
+          setRanking(deduplicado.slice(0, 20))
           setUltimoBatch(data.ultimo_batch ?? null)
         } else if (Array.isArray(data)) {
-          setRankingCompleto(data)
-          setRanking(data.slice(0, 20))
+          const deduplicado = deduplicar(data)
+          setRankingCompleto(deduplicado)
+          setRanking(deduplicado.slice(0, 20))
         }
       } catch (err) {
         console.error("Erro ao carregar ranking:", err)
