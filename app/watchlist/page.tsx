@@ -132,16 +132,6 @@ export default function Watchlist() {
                 Score: {Math.round(ativo.score)} <Tooltip text={TOOLTIPS.score} />
               </p>
 
-              {/* CENÁRIO */}
-              <div className="mt-4">
-                <p className="text-xs text-gray-400 uppercase tracking-wide">
-                  Cenário
-                </p>
-                <p className="text-sm font-medium">
-                  {ativo.cenario}
-                </p>
-              </div>
-
             </div>
           )
         })}
