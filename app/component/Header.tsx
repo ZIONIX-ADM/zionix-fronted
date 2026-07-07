@@ -40,6 +40,7 @@ export default function Header() {
   const [loading, setLoading] = useState(true)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const sbRef = useRef<ReturnType<typeof createClient> | null>(null)
 
   useEffect(() => {
     async function fetchIndices() {
@@ -56,6 +57,8 @@ export default function Header() {
   useEffect(() => {
     let sb: ReturnType<typeof createClient>
     try { sb = createClient() } catch { setLoading(false); return }
+
+    sbRef.current = sb
 
     sb.auth.getUser().then(({ data }) => {
       setUser(data.user)
@@ -78,9 +81,12 @@ export default function Header() {
   }, [])
 
   async function signIn() {
+    if (!sbRef.current) {
+      alert("Erro: configuração incompleta")
+      return
+    }
     try {
-      const sb = createClient()
-      const { data, error } = await sb.auth.signInWithOAuth({
+      const { data, error } = await sbRef.current.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo: `${window.location.origin}/auth/callback` },
       })
@@ -92,8 +98,7 @@ export default function Header() {
 
   async function signOut() {
     try {
-      const sb = createClient()
-      await sb.auth.signOut()
+      if (sbRef.current) await sbRef.current.auth.signOut()
     } catch {}
     setDropdownOpen(false)
     router.push("/")
