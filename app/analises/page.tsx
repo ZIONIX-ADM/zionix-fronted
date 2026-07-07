@@ -171,7 +171,7 @@ export default function AnalisesPage() {
                         width: 40, height: 40, borderRadius: 12, flexShrink: 0,
                         background: DARK, display: "flex", alignItems: "center", justifyContent: "center",
                       }}>
-                        <span style={{ color: C, fontSize: 11, fontWeight: 800 }}>{a.ticker.slice(0, 3)}</span>
+                        <span style={{ color: C, fontSize: 11, fontWeight: 800 }}>{a.ticker.replace(/\.SA$/i, "").slice(0, 3)}</span>
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ fontWeight: 700, color: "#111", fontSize: 13 }}>{a.ticker}</p>

@@ -21,7 +21,7 @@ const SINAL_STYLE = (sinal: string) =>
     ? { bg: "#fff3cd", color: "#8a5c00", border: "#f0d58c" }
     : { bg: "#f0f0f0", color: "#555", border: "#ddd" }
 
-const FILTROS_SINAL = ["Todas", "Compra forte", "Compra", "Aguardar", "Cautela", "Evitar"]
+const FILTROS_SINAL = ["Todas", "Compra forte", "Compra", "Aguardar confirmação", "Cautela", "Evitar"]
 
 export default function Home() {
   const [ticker, setTicker] = useState("")
@@ -284,7 +284,7 @@ export default function Home() {
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {rankingFiltrado.slice(0, 10).map((ativo, idx) => {
                 const s = SINAL_STYLE(ativo.sinal ?? "")
-                const tickerLimpo = (ativo.ticker ?? "").replace(".SA", "")
+                const tickerLimpo = (ativo.ticker ?? "").replace(/\.SA$/i, "")
                 return (
                   <div
                     key={ativo.ticker}
@@ -446,7 +446,7 @@ export default function Home() {
                 <p style={{ fontSize: 18, fontWeight: 700, color: "#111", fontFamily: "var(--font-manrope), sans-serif" }}>
                   {resultado.nome}
                 </p>
-                <p style={{ fontSize: 13, color: "#aaa", marginTop: 2 }}>{(resultado.ticker ?? "").replace(".SA", "")}</p>
+                <p style={{ fontSize: 13, color: "#aaa", marginTop: 2 }}>{(resultado.ticker ?? "").replace(/\.SA$/i, "")}</p>
 
                 <p style={{ fontSize: 36, fontWeight: 800, color: "#111", marginTop: 12, fontFamily: "var(--font-manrope), sans-serif", lineHeight: 1 }}>
                   {resultado.preco}
