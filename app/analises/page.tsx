@@ -50,7 +50,20 @@ export default function AnalisesPage() {
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/analises`)
       .then(r => r.json())
-      .then(d => { if (d && !d.erro && d.distribuicao) setData(d); setLoading(false) })
+      .then(d => {
+        if (d && !d.erro && d.distribuicao) {
+          const dedup = (arr: AtivoCard[]) => Array.from(
+            new Map(arr.map(a => [a.ticker.replace(/\.SA$/i, ""), a])).values()
+          )
+          if (d.ativos_por_decisao) {
+            for (const k of Object.keys(d.ativos_por_decisao)) {
+              d.ativos_por_decisao[k] = dedup(d.ativos_por_decisao[k])
+            }
+          }
+          setData(d)
+        }
+        setLoading(false)
+      })
       .catch(() => setLoading(false))
   }, [])
 
