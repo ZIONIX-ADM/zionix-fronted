@@ -21,7 +21,7 @@ const SINAL_STYLE = (sinal: string) =>
     ? { bg: "#fff3cd", color: "#8a5c00", border: "#f0d58c" }
     : { bg: "#f0f0f0", color: "#555", border: "#ddd" }
 
-const FILTROS_SINAL = ["Todas", "Compra forte", "Compra", "Neutro", "Venda"]
+const FILTROS_SINAL = ["Todas", "Compra forte", "Compra", "Aguardar", "Cautela", "Evitar"]
 
 export default function Home() {
   const [ticker, setTicker] = useState("")
@@ -143,7 +143,7 @@ export default function Home() {
   const rankingFiltrado =
     filtroSinal === "Todas"
       ? ranking
-      : ranking.filter(a => (a.sinal ?? "").toLowerCase().includes(filtroSinal.toLowerCase()))
+      : ranking.filter(a => (a.sinal ?? "").toLowerCase() === filtroSinal.toLowerCase())
 
   const C = "#C9A84C"
   const DARK = "#0a0a0a"
