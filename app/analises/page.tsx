@@ -187,7 +187,7 @@ export default function AnalisesPage() {
                         <span style={{ color: C, fontSize: 11, fontWeight: 800 }}>{a.ticker.replace(/\.SA$/i, "").slice(0, 3)}</span>
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontWeight: 700, color: "#111", fontSize: 13 }}>{a.ticker}</p>
+                        <p style={{ fontWeight: 700, color: "#111", fontSize: 13 }}>{a.ticker.replace(/\.SA$/i, "")}</p>
                         {a.nome && <p style={{ fontSize: 11, color: "#aaa", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.nome}</p>}
                       </div>
                       <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 999, background: c.bg, color: c.color, flexShrink: 0 }}>
@@ -266,10 +266,10 @@ export default function AnalisesPage() {
                   {data.destaques.top_momentum.map(a => (
                     <div key={a.ticker} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <div style={{ width: 36, height: 36, borderRadius: 10, background: DARK, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <span style={{ color: C, fontSize: 10, fontWeight: 800 }}>{a.ticker.slice(0, 3)}</span>
+                        <span style={{ color: C, fontSize: 10, fontWeight: 800 }}>{a.ticker.replace(/\.SA$/i, "").slice(0, 3)}</span>
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontWeight: 700, color: "#111", fontSize: 12 }}>{a.ticker}</p>
+                        <p style={{ fontWeight: 700, color: "#111", fontSize: 12 }}>{a.ticker.replace(/\.SA$/i, "")}</p>
                         <p style={{ fontSize: 11, color: "#aaa" }}>{a.sinal}</p>
                       </div>
                       <span style={{ fontSize: 14, fontWeight: 800, color: "#111", flexShrink: 0, fontFamily: "var(--font-manrope), sans-serif" }}>
@@ -288,10 +288,10 @@ export default function AnalisesPage() {
                   {data.destaques.top_estrutural.map(a => (
                     <div key={a.ticker} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <div style={{ width: 36, height: 36, borderRadius: 10, background: DARK, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <span style={{ color: C, fontSize: 10, fontWeight: 800 }}>{a.ticker.slice(0, 3)}</span>
+                        <span style={{ color: C, fontSize: 10, fontWeight: 800 }}>{a.ticker.replace(/\.SA$/i, "").slice(0, 3)}</span>
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontWeight: 700, color: "#111", fontSize: 12 }}>{a.ticker}</p>
+                        <p style={{ fontWeight: 700, color: "#111", fontSize: 12 }}>{a.ticker.replace(/\.SA$/i, "")}</p>
                         <p style={{ fontSize: 11, color: "#aaa" }}>{a.sinal}</p>
                       </div>
                       <span style={{ fontSize: 14, fontWeight: 800, color: "#111", flexShrink: 0, fontFamily: "var(--font-manrope), sans-serif" }}>
