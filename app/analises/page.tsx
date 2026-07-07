@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import Tooltip from "../component/Tooltip"
 import { TOOLTIPS } from "../component/tooltips"
+import { mapearDecisao, mapearSinal, FILTROS_3 } from "../lib/decisao"
 
 type AtivoCard = { ticker: string; nome?: string; score: number; sinal: string; decisao: string }
 
@@ -18,19 +19,6 @@ type Analises = {
   }
 }
 
-const DECISAO_LABEL: Record<string, string> = {
-  comprar: "Comprar", manter: "Manter",
-  aguardar: "Aguardar", cautela: "Cautela", evitar: "Evitar",
-}
-
-const DECISAO_COLOR: Record<string, { bg: string; color: string }> = {
-  comprar:  { bg: "#e8f5ee", color: "#1a7a45" },
-  manter:   { bg: "#e8f0fe", color: "#1a3a9a" },
-  aguardar: { bg: "#f0f0f0", color: "#555" },
-  cautela:  { bg: "#fff3cd", color: "#8a5c00" },
-  evitar:   { bg: "#fdecea", color: "#a12d2d" },
-}
-
 const MERCADO_INFO: Record<string, { label: string; cor: string; desc: string }> = {
   bull:   { label: "Alta", cor: "#1a7a45", desc: "IBOV acima das médias móveis — ambiente favorável" },
   bear:   { label: "Baixa", cor: "#a12d2d", desc: "IBOV abaixo das médias móveis — ambiente de risco" },
@@ -40,7 +28,7 @@ const MERCADO_INFO: Record<string, { label: string; cor: string; desc: string }>
 const C = "#C9A84C"
 const DARK = "#0a0a0a"
 const MW = { maxWidth: 780, margin: "0 auto", padding: "0 24px" }
-const DECISOES = ["comprar", "manter", "aguardar", "cautela", "evitar"]
+const FILTROS_ANALISES = ["Todos", ...FILTROS_3.slice(1)] as const
 
 export default function AnalisesPage() {
   const [data, setData] = useState<Analises | null>(null)
@@ -65,13 +53,14 @@ export default function AnalisesPage() {
   }, [])
 
   const ativosFiltrados = filtro
-    ? ativos.filter(a => a.decisao === filtro)
+    ? ativos.filter(a => mapearDecisao(a.decisao).label === filtro)
     : []
 
-  const counts = DECISOES.reduce<Record<string, number>>((acc, d) => {
-    acc[d] = ativos.filter(a => a.decisao === d).length
-    return acc
-  }, {})
+  const counts: Record<string, number> = {
+    Comprar: ativos.filter(a => mapearDecisao(a.decisao).label === "Comprar").length,
+    Neutro:  ativos.filter(a => mapearDecisao(a.decisao).label === "Neutro").length,
+    Evitar:  ativos.filter(a => mapearDecisao(a.decisao).label === "Evitar").length,
+  }
 
   const mercadoInfo = data ? (MERCADO_INFO[data.mercado] ?? MERCADO_INFO.neutro) : null
   const maxFaixa = data ? Math.max(...data.distribuicao.map(f => f.count)) : 1
@@ -144,35 +133,24 @@ export default function AnalisesPage() {
 
             {/* Filtros por decisão */}
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              <button
-                onClick={() => setFiltro(null)}
-                style={{
-                  padding: "7px 16px", borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: "pointer",
-                  border: "1px solid",
-                  background: filtro === null ? DARK : "#fff",
-                  color: filtro === null ? "#fff" : "#555",
-                  borderColor: filtro === null ? DARK : "#ddd",
-                }}
-              >
-                Todos ({ativos.length || (data?.total_ativos ?? "—")})
-              </button>
-              {DECISOES.map(d => {
-                const c = DECISAO_COLOR[d]
-                const count = counts[d] ?? 0
-                const ativo = filtro === d
+              {FILTROS_ANALISES.map(f => {
+                const isTodos = f === "Todos"
+                const nivel = !isTodos ? mapearDecisao(f === "Comprar" ? "comprar" : f === "Neutro" ? "aguardar" : "evitar") : null
+                const count = !isTodos ? (counts[f] ?? 0) : null
+                const isActive = isTodos ? filtro === null : filtro === f
                 return (
                   <button
-                    key={d}
-                    onClick={() => setFiltro(filtro === d ? null : d)}
+                    key={f}
+                    onClick={() => setFiltro(isTodos || isActive ? null : f)}
                     style={{
                       padding: "7px 16px", borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: "pointer",
                       border: "1px solid",
-                      background: ativo ? c.color : "#fff",
-                      color: ativo ? "#fff" : "#555",
-                      borderColor: ativo ? c.color : "#ddd",
+                      background: isActive ? (nivel?.color ?? DARK) : "#fff",
+                      color: isActive ? "#fff" : "#555",
+                      borderColor: isActive ? (nivel?.color ?? DARK) : "#ddd",
                     }}
                   >
-                    {DECISAO_LABEL[d]} ({count})
+                    {isTodos ? `Todos (${ativos.length || (data?.total_ativos ?? "—")})` : `${f} (${count})`}
                   </button>
                 )
               })}
@@ -182,7 +160,7 @@ export default function AnalisesPage() {
             {filtro && (
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
                 {ativosFiltrados.map(a => {
-                  const c = DECISAO_COLOR[filtro]
+                  const nivel = mapearDecisao(a.decisao)
                   return (
                     <div key={a.ticker} style={{
                       background: "#fff", borderRadius: 16, border: "1px solid #ebebeb",
@@ -198,8 +176,8 @@ export default function AnalisesPage() {
                         <p style={{ fontWeight: 700, color: "#111", fontSize: 13 }}>{a.ticker.replace(/\.SA$/i, "")}</p>
                         {a.nome && <p style={{ fontSize: 11, color: "#aaa", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.nome}</p>}
                       </div>
-                      <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 999, background: c.bg, color: c.color, flexShrink: 0 }}>
-                        {a.sinal}
+                      <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 999, background: nivel.bg, color: nivel.color, border: `1px solid ${nivel.border}`, flexShrink: 0 }}>
+                        {nivel.label}
                       </span>
                       <span style={{ fontSize: 15, fontWeight: 800, color: "#111", minWidth: 28, textAlign: "right", fontFamily: "var(--font-manrope), sans-serif" }}>
                         {Math.round(a.score)}

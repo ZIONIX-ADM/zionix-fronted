@@ -4,6 +4,7 @@ import AIInterpretation from "./component/AIInterpretation"
 import InfoTooltip from "./component/Tooltip"
 import { TOOLTIPS } from "./component/tooltips"
 import { gerarCenario, gerarRecomendacao } from "./core/score"
+import { mapearSinal, matchFiltro, FILTROS_3 } from "./lib/decisao"
 import { useState, useEffect } from "react"
 import {
   LineChart,
@@ -13,15 +14,6 @@ import {
   Tooltip as ChartTooltip,
   ResponsiveContainer
 } from "recharts"
-
-const SINAL_STYLE = (sinal: string) =>
-  sinal.toLowerCase().includes("compra") || sinal.toLowerCase().includes("comprar")
-    ? { bg: "#e8f5ee", color: "#1a7a45", border: "#b8dfc9" }
-    : sinal.toLowerCase().includes("cautela") || sinal.toLowerCase().includes("evitar")
-    ? { bg: "#fff3cd", color: "#8a5c00", border: "#f0d58c" }
-    : { bg: "#f0f0f0", color: "#555", border: "#ddd" }
-
-const FILTROS_SINAL = ["Todas", "Compra forte", "Compra", "Aguardar confirmação", "Cautela", "Evitar"]
 
 export default function Home() {
   const [ticker, setTicker] = useState("")
@@ -33,7 +25,7 @@ export default function Home() {
   const [ultimoBatch, setUltimoBatch] = useState<string | null>(null)
   const [leituraIA, setLeituraIA] = useState<string>("")
   const [leituraLoading, setLeituraLoading] = useState(false)
-  const [filtroSinal, setFiltroSinal] = useState("Todas")
+  const [filtroSinal, setFiltroSinal] = useState<string>("Todas")
 
   const variacao = resultado?.variacao_percentual ?? 0
 
@@ -151,7 +143,7 @@ export default function Home() {
   const rankingFiltrado =
     filtroSinal === "Todas"
       ? rankingCompleto.slice(0, 20)
-      : rankingCompleto.filter(a => (a.sinal ?? "").toLowerCase() === filtroSinal.toLowerCase())
+      : rankingCompleto.filter(a => matchFiltro(a.sinal ?? "", filtroSinal))
 
   const C = "#C9A84C"
   const DARK = "#0a0a0a"
@@ -264,7 +256,7 @@ export default function Home() {
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {/* Chips de filtro */}
-              {FILTROS_SINAL.map(f => (
+              {FILTROS_3.map(f => (
                 <button
                   key={f}
                   onClick={() => setFiltroSinal(f)}
@@ -291,7 +283,7 @@ export default function Home() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {rankingFiltrado.slice(0, 10).map((ativo, idx) => {
-                const s = SINAL_STYLE(ativo.sinal ?? "")
+                const s = mapearSinal(ativo.sinal ?? "")
                 const tickerLimpo = (ativo.ticker ?? "").replace(/\.SA$/i, "")
                 return (
                   <div
@@ -331,7 +323,7 @@ export default function Home() {
                           fontSize: 11, fontWeight: 600, padding: "2px 9px",
                           borderRadius: 999, background: s.bg, color: s.color,
                           border: `1px solid ${s.border}`,
-                        }}>{ativo.sinal}</span>
+                        }}>{s.label}</span>
                       </div>
                       {ativo.nome && (
                         <p style={{ fontSize: 12, color: "#999", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -465,9 +457,9 @@ export default function Home() {
 
                 {/* Badges */}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 16 }}>
-                  {(() => { const s = SINAL_STYLE(sinal); return (
+                  {(() => { const s = mapearSinal(sinal); return (
                     <span style={{ fontSize: 12, fontWeight: 600, padding: "4px 12px", borderRadius: 999, background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
-                      {sinal}
+                      {s.label}
                     </span>
                   )})()}
                   {resultado.mercado && (
