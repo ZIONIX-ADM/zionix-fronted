@@ -420,7 +420,7 @@ export default function Home() {
               <p style={{ color: "#c0392b", marginTop: 6, fontSize: 14 }}>Não foi possível analisar: {resultado.motivo}</p>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 680 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 680, margin: "0 auto" }}>
 
               {/* CARD PRINCIPAL */}
               <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #ebebeb", padding: 28, position: "relative" }}>
