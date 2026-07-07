@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr"
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get("code")
+  const response = NextResponse.redirect(origin)
 
   if (code) {
     const supabase = createServerClient(
@@ -12,12 +13,16 @@ export async function GET(request: NextRequest) {
       {
         cookies: {
           getAll: () => request.cookies.getAll(),
-          setAll: () => {},
+          setAll: (cookies) => {
+            cookies.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options)
+            )
+          },
         },
       }
     )
     await supabase.auth.exchangeCodeForSession(code)
   }
 
-  return NextResponse.redirect(origin)
+  return response
 }
