@@ -61,7 +61,6 @@ export default function Home() {
       const scoreData = scoreRes.ok ? await scoreRes.json() : {}
       // Sobrescreve score/decisao/sinal com dados do banco (batch suavizado)
       if (scoreData.score != null) {
-        data.score = scoreData.score
         data.decisao = scoreData.decisao
         data.sinal = scoreData.sinal
       }
