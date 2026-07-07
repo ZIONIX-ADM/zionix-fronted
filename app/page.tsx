@@ -29,6 +29,7 @@ export default function Home() {
   const [mostrarGrafico, setMostrarGrafico] = useState(false)
   const [watchlist, setWatchlist] = useState<string[]>([])
   const [ranking, setRanking] = useState<any[]>([])
+  const [rankingCompleto, setRankingCompleto] = useState<any[]>([])
   const [ultimoBatch, setUltimoBatch] = useState<string | null>(null)
   const [leituraIA, setLeituraIA] = useState<string>("")
   const [leituraLoading, setLeituraLoading] = useState(false)
@@ -112,13 +113,15 @@ export default function Home() {
     async function carregarRanking() {
       try {
         await fetch(`${process.env.NEXT_PUBLIC_API_URL}/health`).catch(() => {})
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ranking?limite=20`)
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ranking?limite=500`)
         const data = await res.json()
         if (data.ativos) {
-          setRanking(data.ativos)
+          setRankingCompleto(data.ativos)
+          setRanking(data.ativos.slice(0, 20))
           setUltimoBatch(data.ultimo_batch ?? null)
         } else if (Array.isArray(data)) {
-          setRanking(data) // fallback formato antigo
+          setRankingCompleto(data)
+          setRanking(data.slice(0, 20))
         }
       } catch (err) {
         console.error("Erro ao carregar ranking:", err)
@@ -142,8 +145,8 @@ export default function Home() {
 
   const rankingFiltrado =
     filtroSinal === "Todas"
-      ? ranking
-      : ranking.filter(a => (a.sinal ?? "").toLowerCase() === filtroSinal.toLowerCase())
+      ? rankingCompleto.slice(0, 20)
+      : rankingCompleto.filter(a => (a.sinal ?? "").toLowerCase() === filtroSinal.toLowerCase())
 
   const C = "#C9A84C"
   const DARK = "#0a0a0a"
