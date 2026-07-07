@@ -1,8 +1,10 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
+import { usePathname, useRouter } from "next/navigation"
+import { useEffect, useRef, useState } from "react"
+import { createClient } from "../../lib/supabase"
+import type { User } from "@supabase/supabase-js"
 
 type IndiceItem = { valor: number; variacao_pct: number | null; variacao_abs: number | null } | null
 
@@ -32,7 +34,12 @@ const PREFIXOS: Record<string, string> = { dolar: "R$ ", btc: "U$ " }
 
 export default function Header() {
   const pathname = usePathname()
+  const router = useRouter()
   const [indices, setIndices] = useState<Indices | null>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const supabase = createClient()
 
   useEffect(() => {
     async function fetchIndices() {
@@ -45,6 +52,41 @@ export default function Header() {
     const id = setInterval(fetchIndices, 5 * 60 * 1000)
     return () => clearInterval(id)
   }, [])
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUser(data.user))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  async function signIn() {
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    })
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut()
+    setDropdownOpen(false)
+    router.push("/")
+  }
+
+  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined
+  const nome = (user?.user_metadata?.full_name ?? user?.email ?? "") as string
+  const iniciais = nome.trim().split(" ").slice(0, 2).map((p: string) => p[0]).join("").toUpperCase() || "?"
 
   const items = [
     { key: "ibov",  label: "IBOV" },
@@ -148,25 +190,73 @@ export default function Header() {
             )
           })}
 
-          {/* Avatar */}
-          <div
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: "50%",
-              background: "#C9A84C22",
-              border: "1px solid #C9A84C55",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#C9A84C",
-              fontSize: 12,
-              fontWeight: 700,
-              letterSpacing: "0.05em",
-            }}
-          >
-            MZ
-          </div>
+          {/* Auth */}
+          {!user ? (
+            <button
+              onClick={signIn}
+              style={{
+                display: "flex", alignItems: "center", gap: 8,
+                background: "#ffffff", color: "#111", border: "none",
+                borderRadius: 10, padding: "7px 14px",
+                fontSize: 13, fontWeight: 600, cursor: "pointer",
+                fontFamily: "var(--font-inter), sans-serif",
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 48 48">
+                <path fill="#FFC107" d="M43.6 20H24v8h11.3C33.6 33.1 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.1-4z"/>
+                <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.5 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
+                <path fill="#4CAF50" d="M24 44c5.2 0 9.9-1.9 13.5-5l-6.2-5.2C29.5 35.6 26.9 36 24 36c-5.2 0-9.6-2.9-11.3-7.1l-6.6 5.1C9.6 39.5 16.3 44 24 44z"/>
+                <path fill="#1976D2" d="M43.6 20H24v8h11.3c-.9 2.4-2.5 4.4-4.5 5.8l6.2 5.2C40.9 35.7 44 30.3 44 24c0-1.3-.1-2.7-.4-4z"/>
+              </svg>
+              Entrar
+            </button>
+          ) : (
+            <div ref={dropdownRef} style={{ position: "relative" }}>
+              <button
+                onClick={() => setDropdownOpen(v => !v)}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+              >
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt={nome} width={34} height={34}
+                    style={{ borderRadius: "50%", border: "2px solid #C9A84C55", display: "block" }} />
+                ) : (
+                  <div style={{
+                    width: 34, height: 34, borderRadius: "50%",
+                    background: "#C9A84C22", border: "1px solid #C9A84C55",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#C9A84C", fontSize: 12, fontWeight: 700,
+                  }}>
+                    {iniciais}
+                  </div>
+                )}
+              </button>
+              {dropdownOpen && (
+                <div style={{
+                  position: "absolute", right: 0, top: 42, zIndex: 100,
+                  background: "#1a1a1a", border: "1px solid #2a2a2a",
+                  borderRadius: 12, padding: "6px 0", minWidth: 160,
+                  boxShadow: "0 8px 24px rgba(0,0,0,.5)",
+                }}>
+                  <div style={{ padding: "8px 16px 8px", borderBottom: "1px solid #2a2a2a", marginBottom: 4 }}>
+                    <p style={{ color: "#e8e8e8", fontSize: 13, fontWeight: 600, margin: 0 }}>{nome.split(" ")[0]}</p>
+                    <p style={{ color: "#666", fontSize: 11, margin: 0, marginTop: 2 }}>{user.email}</p>
+                  </div>
+                  <Link href="/perfil" onClick={() => setDropdownOpen(false)}
+                    style={{ display: "block", padding: "8px 16px", color: "#ccc", fontSize: 13, textDecoration: "none" }}>
+                    Meu Perfil
+                  </Link>
+                  <button onClick={signOut} style={{
+                    display: "block", width: "100%", textAlign: "left",
+                    padding: "8px 16px", color: "#e0655a", fontSize: 13,
+                    background: "none", border: "none", cursor: "pointer",
+                    fontFamily: "var(--font-inter), sans-serif",
+                  }}>
+                    Sair
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </nav>
       </header>
     </div>
