@@ -22,6 +22,7 @@ export default function Home() {
   const [watchlist, setWatchlist] = useState<string[]>([])
   const [ranking, setRanking] = useState<any[]>([])
   const [rankingCompleto, setRankingCompleto] = useState<any[]>([])
+  const [totalAnalisados, setTotalAnalisados] = useState<number | null>(null)
   const [ultimoBatch, setUltimoBatch] = useState<string | null>(null)
   const [leituraIA, setLeituraIA] = useState<string>("")
   const [leituraLoading, setLeituraLoading] = useState(false)
@@ -104,6 +105,10 @@ export default function Home() {
     async function carregarRanking() {
       try {
         await fetch(`${process.env.NEXT_PUBLIC_API_URL}/health`).catch(() => {})
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/analises`)
+          .then(r => r.json())
+          .then(a => { if (typeof a?.total_ativos === "number") setTotalAnalisados(a.total_ativos) })
+          .catch(() => {})
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ranking?limite=500`)
         const data = await res.json()
         const deduplicar = (arr: any[]) => Array.from(
@@ -181,7 +186,7 @@ export default function Home() {
             }}>
               <span className="pulse-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: C, display: "inline-block" }} />
               <span style={{ color: C, fontSize: 11, fontWeight: 700, letterSpacing: "0.16em" }}>
-                {rankingCompleto.length || "—"} ATIVOS ANALISADOS HOJE
+                {totalAnalisados ?? (rankingCompleto.length || "—")} ATIVOS ANALISADOS HOJE
               </span>
             </div>
 
@@ -196,7 +201,7 @@ export default function Home() {
             </h1>
 
             <p style={{ color: "#8a8a8a", fontSize: 16, textAlign: "center", maxWidth: 480, marginBottom: 40, lineHeight: 1.6 }}>
-              Motor de análise técnica com {rankingCompleto.length || "—"} ativos ranqueados por score diário.
+              Motor de análise técnica com {totalAnalisados ?? (rankingCompleto.length || "—")} ativos analisados por score diário.
             </p>
 
             {/* Barra de busca */}
