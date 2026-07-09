@@ -88,7 +88,7 @@ export default function AnalisesPage() {
             Panorama completo da B3
           </h1>
           <p style={{ color: "#6b7280", fontSize: 14, maxWidth: 380 }}>
-            Agregações em tempo real de {ativos.length || (data?.total_ativos ?? "—")} ativos analisados.
+            Agregações em tempo real de {data?.total_ativos ?? (ativos.length || "—")} ativos analisados.
           </p>
         </div>
       </section>
